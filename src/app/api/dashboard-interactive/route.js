@@ -10,6 +10,7 @@ export async function GET(request) {
 
         const metricsParam = searchParams.get('metrics');
         const metrics = metricsParam ? metricsParam.split(',') : [];
+        const groupBy = searchParams.get('groupBy') || 'municipality'; // Default to municipality for backwards compatibility
 
         if (metrics.length === 0) {
             return NextResponse.json({ status: "success", data: { blocks: [] } });
@@ -20,17 +21,43 @@ export async function GET(request) {
         let params = [];
         let geogTitle = "National View";
 
+        const municipalityParams = searchParams.get('municipality');
+        const legislativeDistrictParams = searchParams.get('legislative_district');
+
         if (level === 'Region' && region && region !== 'All Regions') {
             groupCol = 'division';
             params.push(region);
             filterSql += ` AND region = $${params.length}`;
-            geogTitle = `Region ${region}`;
+            geogTitle = region; // removed "Region " prefix since it's already in the string
         } else if (level === 'Division' && division) {
-            groupCol = 'municipality';
+            groupCol = groupBy === 'legislative_district' ? 'legislative_district' : 'municipality';
             params.push(division);
             filterSql += ` AND division = $${params.length}`;
-            geogTitle = `Division of ${division}`;
+            geogTitle = `Division of ${division} (${groupBy === 'legislative_district' ? 'By District' : 'By Municipality'})`;
+        } else if (level === 'DistrictGroup') {
+            groupCol = 'district';
+            if (municipalityParams) {
+                params.push(municipalityParams);
+                filterSql += ` AND municipality = $${params.length}`;
+                if (division) {
+                    params.push(division);
+                    filterSql += ` AND division = $${params.length}`;
+                }
+                geogTitle = `Municipality of ${municipalityParams}`;
+            } else if (legislativeDistrictParams) {
+                params.push(legislativeDistrictParams);
+                filterSql += ` AND legislative_district = $${params.length}`;
+                if (division) {
+                    params.push(division);
+                    filterSql += ` AND division = $${params.length}`;
+                }
+                geogTitle = `Legislative District: ${legislativeDistrictParams}`;
+            }
         }
+
+        const baseTable = (groupBy === 'legislative_district' && level === 'Division') || (level === 'DistrictGroup' && legislativeDistrictParams)
+            ? '(SELECT d.*, r.legislative_district FROM dim_schools d LEFT JOIN raw_school_unique_v2 r ON d.schoolid = r.schoolid) AS base_table'
+            : 'dim_schools';
 
         // 1. Definition Map (Connecting UI IDs to SQL implementations)
         const schemaDef = {
@@ -75,7 +102,7 @@ export async function GET(request) {
             if (def.type === 'CATEGORICAL') {
                 const sql = `
                     SELECT ${def.col} as label, COUNT(*) as value
-                    FROM dim_schools
+                    FROM ${baseTable}
                     ${filterSql} AND NULLIF(${def.col}::text, '') IS NOT NULL
                     GROUP BY ${def.col}
                     ORDER BY value DESC
@@ -96,14 +123,14 @@ export async function GET(request) {
             } else {
                 const sql = `
                     SELECT ${groupCol} as label, ${def.sql} as value
-                    FROM dim_schools
+                    FROM ${baseTable}
                     ${filterSql}
                     GROUP BY ${groupCol}
                     ORDER BY value DESC
                 `;
                 const res = await pool.query(sql, params);
 
-                const sumSql = `SELECT ${def.sql} as total FROM dim_schools ${filterSql}`;
+                const sumSql = `SELECT ${def.sql} as total FROM ${baseTable} ${filterSql}`;
                 const sumRes = await pool.query(sumSql, params);
 
                 results[metric] = {

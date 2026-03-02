@@ -59,18 +59,25 @@ export default function DashboardPage() {
         }));
     };
 
-    const applyDrillDown = (level, name) => {
+    const applyDrillDown = (level, name, groupingTarget) => {
         setFilters(prev => {
+            if (prev.drillLevel === level) return prev; // Prevent double-firing from corrupting history stack
             const nextHistory = [...prev.history, {
                 drillLevel: prev.drillLevel,
                 region: prev.region,
                 division: prev.division,
+                municipality: prev.municipality,
+                legislative_district: prev.legislative_district,
                 categoricalFilters: prev.categoricalFilters
             }];
 
             const newState = { ...prev, drillLevel: level, history: nextHistory, global_trigger: prev.global_trigger + 1 };
             if (level === 'Region') newState.region = name;
-            if (level === 'Division') newState.division = name;
+            else if (level === 'Division') newState.division = name;
+            else if (level === 'DistrictGroup') {
+                if (groupingTarget === 'municipality') newState.municipality = name;
+                if (groupingTarget === 'legislative_district') newState.legislative_district = name;
+            }
 
             return newState;
         });

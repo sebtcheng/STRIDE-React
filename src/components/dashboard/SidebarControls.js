@@ -157,7 +157,9 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                     <div className="flex-1">
                         <p className="text-[9px] text-blue-300 font-bold uppercase tracking-tighter">Current Scope</p>
                         <h2 className="text-sm font-bold truncate">
-                            {filters.drillLevel === 'National' ? 'National View' : `${filters.drillLevel}: ${filters[filters.drillLevel.toLowerCase()] || filters.region}`}
+                            {filters.drillLevel === 'National' ? 'National View' :
+                                filters.drillLevel === 'DistrictGroup' ? `District Group: ${filters.municipality || filters.legislative_district}` :
+                                    `${filters.drillLevel}: ${filters[filters.drillLevel.toLowerCase()] || filters.region}`}
                         </h2>
                     </div>
                     {filters.history.length > 0 && (
@@ -171,31 +173,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                 </div>
             </div>
 
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-[#003366] flex items-center gap-2">
-                    <Filter size={18} className="text-[#FFB81C]" />
-                    Control Hub
-                </h2>
-            </div>
 
-            {/* GLOBAL MASTER INPUTS - Always visible */}
-            <div className="px-5 pt-5 pb-2 space-y-4 border-b border-gray-100 bg-gray-50/50">
-                <div className="relative">
-                    <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                    <input
-                        type="text"
-                        placeholder="Global Search..."
-                        value={filters.q}
-                        onChange={(e) => setFilters({ q: e.target.value })}
-                        className="w-full text-sm pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] outline-none transition-all"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 gap-1">
-                    <SelectDropdown label="Region Scope" field="region" options={dbSchema.uniRegions} placeholder="All Regions" filters={filters} setFilters={setFilters} />
-                    <SelectDropdown label="Division" field="division" options={dbSchema.uniDivisions} placeholder="All Divisions" filters={filters} setFilters={setFilters} />
-                </div>
-            </div>
 
             <div className="flex-1 p-5 space-y-6">
 
@@ -324,8 +302,16 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                         {!quickSearchAdvanced && (
                             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-center">
                                 <Search className="mx-auto text-blue-400 mb-2" size={24} />
-                                <p className="text-[10px] font-bold text-blue-800 uppercase leading-tight">Fast Lookup Mode</p>
-                                <p className="text-[9px] text-blue-600 mt-1">Use the Global Search bar above for Name or ID lookup.</p>
+                                <p className="text-[10px] font-bold text-blue-800 uppercase leading-tight mb-3">Fast Lookup Mode</p>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Type School Name or ID..."
+                                        value={filters.q || ''}
+                                        onChange={(e) => setFilters({ q: e.target.value })}
+                                        className="w-full text-sm py-2 px-3 bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-[#003366] outline-none transition-all"
+                                    />
+                                </div>
                             </div>
                         )}
 

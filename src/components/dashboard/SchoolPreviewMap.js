@@ -29,11 +29,11 @@ export default function SchoolPreviewMap({ lat, lng, name, results = [], onMarke
             <ChangeView center={center} zoom={zoom} />
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-            {results.map((school) => {
+            {results.map((school, index) => {
                 const isActive = school.id === results.find(r => r.lat === lat && r.lng === lng)?.id;
                 return (
                     <CircleMarker
-                        key={school.id}
+                        key={`${school.id}-${index}`}
                         center={[school.lat, school.lng]}
                         radius={isActive ? 12 : 6}
                         eventHandlers={{

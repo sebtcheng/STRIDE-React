@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MapPin, Maximize2, X } from "lucide-react";
 import SchoolLocatorTab from "./SchoolLocatorTab";
 
 // Dynamically import Plotly with next/dynamic and no SSR to prevent issues with window variable missing 
@@ -13,6 +13,8 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
     const [dashboardBlocks, setDashboardBlocks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
+    const [maximizedBlock, setMaximizedBlock] = useState(null);
+    const [divisionGrouping, setDivisionGrouping] = useState('municipality');
 
     useEffect(() => {
         const selectedMetricsStr = (filters.selected_metrics && filters.selected_metrics.length > 0) ? filters.selected_metrics.join(',') : '';
@@ -29,7 +31,10 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
         const url = new URL(window.location.origin + "/api/dashboard-interactive");
         if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
         if (filters.division) url.searchParams.append("division", filters.division);
+        if (filters.municipality) url.searchParams.append("municipality", filters.municipality);
+        if (filters.legislative_district) url.searchParams.append("legislative_district", filters.legislative_district);
         if (filters.drillLevel) url.searchParams.append("level", filters.drillLevel);
+        if (filters.drillLevel === 'Division') url.searchParams.append("groupBy", divisionGrouping);
         url.searchParams.append("metrics", selectedMetricsStr);
 
         fetch(url)
@@ -50,30 +55,75 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                 setDashboardBlocks([]);
                 setLoading(false);
             });
-    }, [filters.global_trigger, filters.selected_metrics, filters.drillLevel, filters.region, filters.division]);
+    }, [filters.global_trigger, filters.selected_metrics, filters.drillLevel, filters.region, filters.division, filters.municipality, filters.legislative_district, divisionGrouping]);
+
+    const filtersRef = useRef(filters);
+    useEffect(() => {
+        filtersRef.current = filters;
+    }, [filters]);
+
+    // Keep maximized modal in-sync with fresh data arriving from drilldown fetches
+    useEffect(() => {
+        if (maximizedBlock && dashboardBlocks.length > 0) {
+            const updatedBlock = dashboardBlocks.find(b => b.id === maximizedBlock.id);
+            if (updatedBlock && updatedBlock !== maximizedBlock) {
+                setMaximizedBlock(updatedBlock);
+            }
+        } else if (maximizedBlock && !loading && dashboardBlocks.length === 0) {
+            setMaximizedBlock(null);
+        }
+    }, [dashboardBlocks, maximizedBlock, loading]);
 
     const handleBarClick = (event, blockType) => {
-        if (!event.points || event.points.length === 0) return;
-        const clickedName = event.points[0].y; // Horizontal layout -> label is Y
+        console.log(">>> Plotly Click Event Triggered <<<");
+        console.log("Raw Event Data:", event);
+        console.log("Block Type:", blockType);
+
+        if (!event || !event.points || event.points.length === 0) {
+            console.warn("Click did not register any data points. Make sure you click exactly inside the colored bar.");
+            return;
+        }
+
+        const point = event.points[0];
+        console.log("Extracted Point Data:", point);
+
+        const clickedName = String(point.label || point.y || point.text || '').trim();
+        console.log("Resolved Clicked Name:", clickedName);
+
+        const currentFilters = filtersRef.current;
+        console.log("Current Drill Level:", currentFilters.drillLevel);
 
         if (blockType === 'numeric') {
-            // Geographic Drilldown
-            if (filters.drillLevel === 'National') drillDown('Region', clickedName);
-            else if (filters.drillLevel === 'Region') drillDown('Division', clickedName);
+            if (currentFilters.drillLevel === 'National') {
+                console.log(`Instructing Drilldown to Region: ${clickedName}`);
+                drillDown('Region', clickedName);
+            } else if (currentFilters.drillLevel === 'Region') {
+                console.log(`Instructing Drilldown to Division: ${clickedName}`);
+                drillDown('Division', clickedName);
+            } else if (currentFilters.drillLevel === 'Division') {
+                console.log(`Instructing Drilldown to DistrictGroup: ${clickedName}, target: ${divisionGrouping}`);
+                drillDown('DistrictGroup', clickedName, divisionGrouping);
+            } else {
+                console.log("No further drilldown from this level.");
+            }
         } else {
-            // Categorical Filter Placeholder (Part 3B.2)
             console.log("Categorical Filtering Triggered: Subset global dashboard by -> ", clickedName);
         }
     };
 
     const layoutStyling = {
-        font: { family: 'Inter, sans-serif', color: '#475569' },
+        font: { family: 'Inter, sans-serif', color: '#475569', size: 10 },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',
         autosize: true,
         showlegend: false,
-        margin: { t: 10, r: 20, b: 30, l: 80 },
-        yaxis: { autorange: 'reversed' }
+        margin: { t: 10, r: 20, b: 30 },
+        yaxis: {
+            autorange: 'reversed',
+            automargin: true,
+            tickmode: 'linear',
+            dtick: 1
+        }
     };
 
     return (
@@ -103,8 +153,29 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                             Instructions: Click on the bars to drilldown on any specific location then use the School Locator tab above to look for any specific school.
                         </div>
 
+                        {filters.drillLevel === 'Division' && (
+                            <div className="w-full max-w-4xl mx-auto flex justify-center mb-6">
+                                <div className="bg-white border text-sm font-bold border-[#003366] rounded-full flex overflow-hidden shadow-sm">
+                                    <button
+                                        onClick={() => setDivisionGrouping('municipality')}
+                                        className={`px-6 py-2 transition-colors ${divisionGrouping === 'municipality' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-blue-50'}`}
+                                    >
+                                        Summary By Municipality
+                                    </button>
+                                    <button
+                                        onClick={() => setDivisionGrouping('legislative_district')}
+                                        className={`px-6 py-2 transition-colors ${divisionGrouping === 'legislative_district' ? 'bg-[#003366] text-white' : 'text-[#003366] hover:bg-blue-50'}`}
+                                    >
+                                        Summary By Legislative District
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="w-full max-w-4xl mx-auto bg-gray-50 border border-gray-200 text-center p-3 rounded-md mb-8 text-gray-600 text-sm">
-                            Current Filter: Viewing {filters.drillLevel === 'National' ? 'All Regions' : `${filters.drillLevel}: ${filters[filters.drillLevel.toLowerCase()] || filters.region}`}
+                            Current Filter: Viewing {filters.drillLevel === 'National' ? 'All Regions' :
+                                filters.drillLevel === 'DistrictGroup' ? `District Group: ${filters.municipality || filters.legislative_district}` :
+                                    `${filters.drillLevel}: ${filters[filters.drillLevel.toLowerCase()] || filters.region}`}
                         </div>
 
                         {loading && (
@@ -129,8 +200,16 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1400px] mx-auto">
                                 {dashboardBlocks.map((block) => (
                                     <div key={block.id} className="w-full border border-gray-200 shadow-md rounded-xl overflow-hidden bg-white flex flex-col hover:shadow-lg transition-shadow">
-                                        <div className="bg-[#003366] text-white font-bold py-2.5 px-3 text-center text-sm truncate">
-                                            {block.title}
+                                        <div className="bg-[#003366] text-white font-bold py-2.5 px-3 flex justify-between items-center text-sm">
+                                            <div className="w-6 hidden md:block"></div> {/* spacer to keep strict center alignment */}
+                                            <span className="truncate flex-1 text-center">{block.title}</span>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setMaximizedBlock(block); }}
+                                                className="text-white hover:text-gray-300 transition-colors opacity-70 hover:opacity-100 flex-none w-6 h-6 flex items-center justify-center"
+                                                title="Maximize Chart"
+                                            >
+                                                <Maximize2 size={16} />
+                                            </button>
                                         </div>
                                         <div className="p-5 flex-1 flex flex-col">
                                             <div className="bg-[#eef2f6] rounded-lg p-4 text-center mb-4 shadow-inner border border-blue-100">
@@ -138,13 +217,37 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                 <p className="text-3xl font-black text-[#003366]">{block.total.toLocaleString()}</p>
                                             </div>
 
-                                            <div className="flex-1 min-h-[250px] relative">
+                                            <div
+                                                className="flex-1 min-h-[250px] relative z-10"
+                                                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                                onClickCapture={(e) => {
+                                                    console.log("DOM Click Captured. Checking Hovered Point Ref...", window._hoveredPoint);
+                                                    if (window._hoveredPoint) {
+                                                        const clickedName = window._hoveredPoint;
+                                                        const currentFilters = filtersRef.current;
+                                                        if (block.type === 'numeric') {
+                                                            if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
+                                                            else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
+                                                            else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                        }
+                                                    }
+                                                }}
+                                            >
                                                 <Plot
                                                     data={[{
                                                         y: block.data.labels,
                                                         x: block.data.values,
                                                         type: 'bar',
                                                         orientation: 'h',
+                                                        text: block.data.values.map(v => v.toLocaleString()),
+                                                        textposition: 'outside',
+                                                        insidetextanchor: 'end',
+                                                        cliponaxis: false,
+                                                        textfont: {
+                                                            family: 'Inter, sans-serif',
+                                                            size: 10,
+                                                            color: '#475569'
+                                                        },
                                                         marker: {
                                                             color: block.type === 'categorical' ? '#FFB81C' : '#0066CC',
                                                             opacity: 0.9
@@ -152,12 +255,30 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                     }]}
                                                     layout={{
                                                         ...layoutStyling,
-                                                        // Adjust left margin dynamically if labels are long
-                                                        margin: { t: 5, r: 15, b: 25, l: block.type === 'categorical' ? 120 : 80 }
+                                                        margin: { t: 5, r: 60, b: 25, l: 15 },
+                                                        dragmode: false,
+                                                        hovermode: 'closest',
+                                                        xaxis: {
+                                                            visible: false,
+                                                            range: [0, Math.max(...block.data.values) * 1.25] // Give 25% extra space for huge numbers to safely sit on screen
+                                                        },
                                                     }}
-                                                    useResizeHandler
-                                                    className="w-full h-full absolute inset-0"
-                                                    onClick={(event) => handleBarClick(event, block.type)}
+                                                    config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                                                    useResizeHandler={true}
+                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                                                    onClick={(event) => {
+                                                        console.log("Plotly fallback onClick fired!");
+                                                        handleBarClick(event, block.type);
+                                                    }}
+                                                    onHover={(event) => {
+                                                        if (event.points && event.points.length > 0) {
+                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                        }
+                                                    }}
+                                                    onUnhover={() => {
+                                                        // Delay clearing to prevent micro-twitch click misses on small bars
+                                                        setTimeout(() => { window._hoveredPoint = null; }, 500);
+                                                    }}
                                                 />
                                             </div>
                                             <div className="text-center mt-2 text-[10px] text-gray-400 font-medium italic">
@@ -166,6 +287,104 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Full Screen Chart Modal */}
+                        {maximizedBlock && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10 bg-black/60 backdrop-blur-sm shadow-2xl">
+                                <div className="bg-white rounded-2xl w-full max-w-7xl h-full max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="bg-[#003366] text-white flex justify-between items-center px-6 py-4 rounded-t-2xl">
+                                        <div>
+                                            <h2 className="text-xl font-black tracking-wide">{maximizedBlock.title}</h2>
+                                            <p className="text-blue-200 text-xs mt-1 uppercase tracking-widest">{maximizedBlock.subtitle}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setMaximizedBlock(null)}
+                                            className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+                                        >
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                    <div className="p-8 flex-1 flex flex-col overflow-hidden bg-gray-50/50 relative">
+
+                                        {loading && (
+                                            <div className="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+                                                <div className="text-[#003366] font-black text-xl animate-pulse">
+                                                    Fetching Drilldown Details...
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center mb-6">
+                                            <h3 className="font-bold text-gray-400 text-sm uppercase tracking-widest mb-2">Overall Total</h3>
+                                            <p className="text-5xl font-black text-[#003366]">{maximizedBlock.total.toLocaleString()}</p>
+                                        </div>
+
+                                        <div
+                                            className="flex-1 relative z-10 w-full min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+                                            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                            onClickCapture={(e) => {
+                                                if (window._hoveredPoint) {
+                                                    const clickedName = window._hoveredPoint;
+                                                    const currentFilters = filtersRef.current;
+                                                    if (maximizedBlock.type === 'numeric') {
+                                                        if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
+                                                        else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
+                                                        else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <Plot
+                                                data={[{
+                                                    y: maximizedBlock.data.labels,
+                                                    x: maximizedBlock.data.values,
+                                                    type: 'bar',
+                                                    orientation: 'h',
+                                                    text: maximizedBlock.data.values.map(v => v.toLocaleString()),
+                                                    textposition: 'outside',
+                                                    insidetextanchor: 'end',
+                                                    cliponaxis: false,
+                                                    textfont: {
+                                                        family: 'Inter, sans-serif',
+                                                        size: 13,
+                                                        color: '#475569'
+                                                    },
+                                                    marker: {
+                                                        color: maximizedBlock.type === 'categorical' ? '#FFB81C' : '#0066CC',
+                                                        opacity: 0.95
+                                                    }
+                                                }]}
+                                                layout={{
+                                                    ...layoutStyling,
+                                                    margin: { t: 20, r: 100, b: 40, l: 30 },
+                                                    dragmode: false,
+                                                    hovermode: 'closest',
+                                                    xaxis: {
+                                                        visible: false,
+                                                        range: [0, Math.max(...maximizedBlock.data.values) * 1.25]
+                                                    },
+                                                    yaxis: {
+                                                        ...layoutStyling.yaxis,
+                                                        cliponaxis: false,
+                                                        tickfont: { size: 12, family: 'Inter, sans-serif' }
+                                                    }
+                                                }}
+                                                config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                                                useResizeHandler={true}
+                                                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                                                onClick={(event) => handleBarClick(event, maximizedBlock.type)}
+                                                onHover={(event) => {
+                                                    if (event.points && event.points.length > 0) {
+                                                        window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                    }
+                                                }}
+                                                onUnhover={() => { setTimeout(() => { window._hoveredPoint = null; }, 500); }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
