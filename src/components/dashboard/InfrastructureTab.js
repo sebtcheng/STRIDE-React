@@ -2,124 +2,337 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Building, MapPin } from "lucide-react";
+import { Building, TrendingUp, Pickaxe, MapPin } from "lucide-react";
+import DataTable from "react-data-table-component";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-gray-400">Loading Charts...</div> });
 
+const INFRA_COLORS = {
+    "Repairs": "#FF69B4",
+    "Gabaldon": "#22C55E",
+    "New Construction": "#3B82F6",
+    "Electrification": "#EAB308",
+    "ALS-CLC": "#8B5CF6",
+    "Wash WINS": "#06B6D4",
+    "Classrooms": "#F97316"
+};
+
 export default function InfrastructureTab({ filters }) {
     const [infraData, setInfraData] = useState({
-        allocation: { categories: [], funded: [], unfunded: [] },
-        completion: [0, 0, 0],
-        trend: { years: [], values: [] },
         summary: { totalProjects: 0 },
+        yearlyData: {},
         loading: true
     });
 
+    const [latestClickKey, setLatestClickKey] = useState(null);
+    const [projectData, setProjectData] = useState([]);
+    const [loadingProjects, setLoadingProjects] = useState(true);
+
     useEffect(() => {
-        const regionParam = filters.region || 'All Regions';
-        fetch(`/api/infra-data?region=${encodeURIComponent(regionParam)}`)
+        setInfraData(prev => ({ ...prev, loading: true }));
+        fetch('/api/infra-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters })
+        })
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
                     setInfraData({ ...res.data, loading: false });
                 }
             })
-            .catch(err => console.error("Error fetching EFD infra data:", err));
-    }, [filters.region]);
+            .catch(err => {
+                console.error("Error fetching infra data:", err);
+                setInfraData(prev => ({ ...prev, loading: false }));
+            });
+    }, [filters]);
+
+    useEffect(() => {
+        setLoadingProjects(true);
+        fetch('/api/infra-projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters, clickKey: latestClickKey })
+        })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === "success") {
+                    setProjectData(res.data);
+                }
+                setLoadingProjects(false);
+            })
+            .catch(err => {
+                console.error("Error fetching infra projects:", err);
+                setLoadingProjects(false);
+            });
+    }, [filters, latestClickKey]);
+
+    const handleChartClick = (e, chartType) => {
+        if (e.points && e.points.length > 0) {
+            const point = e.points[0];
+            setLatestClickKey({
+                year: point.x,
+                category: point.data.name,
+                chartType: chartType
+            });
+        }
+    };
 
     const layoutStyling = {
         font: { family: 'Inter, sans-serif' },
-        margin: { t: 40, r: 20, b: 60, l: 40 },
+        margin: { t: 40, r: 20, b: 40, l: 60 },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',
         autosize: true
     };
 
-    const allocationData = [
-        {
-            x: infraData.allocation.categories,
-            y: infraData.allocation.funded,
-            type: 'bar',
-            marker: { color: '#003366' },
-            name: 'Funded'
-        },
-        {
-            x: infraData.allocation.categories,
-            y: infraData.allocation.unfunded,
-            type: 'bar',
-            marker: { color: '#FFB81C' },
-            name: 'Unfunded Needs'
-        }
-    ];
+    const years = Object.keys(infraData.yearlyData).sort();
+    const allCategories = new Set();
+    years.forEach(y => {
+        Object.keys(infraData.yearlyData[y].categories).forEach(c => allCategories.add(c));
+    });
 
-    const completionData = [{
-        values: infraData.completion,
-        labels: ['Completed', 'Ongoing', 'Delayed'],
-        type: 'pie',
-        hole: 0.5,
-        marker: { colors: ['#003366', '#FFB81C', '#CE1126'] }
-    }];
+    const colors = ["#003366", "#FFB81C", "#CE1126", "#22C55E", "#3B82F6", "#EAB308", "#FF69B4"];
+    const getColor = (c, i) => INFRA_COLORS[c] || colors[i % colors.length];
 
-    const trendData = [
-        {
-            x: infraData.trend.years,
-            y: infraData.trend.values,
+    const allocationTraces = [];
+    const pipelineTraces = [];
+    const completionTraces = [];
+    const trendTraces = [];
+
+    Array.from(allCategories).forEach((cat, i) => {
+        const catColor = getColor(cat, i);
+
+        // 1. Total Allocation
+        allocationTraces.push({
+            x: years,
+            y: years.map(y => infraData.yearlyData[y].categories[cat]?.allocation || 0),
+            name: cat,
+            type: 'bar',
+            marker: { color: catColor },
+            hovertemplate: '<b>%{x}</b><br>%{y:$,.0f}<extra>%{data.name}</extra>'
+        });
+
+        // 2. Trend Allocation
+        trendTraces.push({
+            x: years,
+            y: years.map(y => infraData.yearlyData[y].categories[cat]?.allocation || 0),
+            name: cat,
             type: 'scatter',
             mode: 'lines+markers',
-            name: 'Budget Allocation (Millions)',
-            marker: { color: '#003366', size: 8 },
-            line: { shape: 'spline', width: 3 }
+            marker: { color: catColor, size: 6 },
+            line: { width: 2 },
+            hovertemplate: '<b>%{x}</b><br>%{y:$,.0f}<extra>%{data.name}</extra>'
+        });
+
+        // 3. Average Completion Rate (>= 2023 to show sample data)
+        const recentYears = years.filter(y => parseInt(y) >= 2023);
+        completionTraces.push({
+            x: recentYears,
+            y: recentYears.map(y => (infraData.yearlyData[y].categories[cat]?.completion || 0) * 100),
+            name: cat,
+            type: 'bar',
+            marker: { color: catColor },
+            hovertemplate: '<b>%{x}</b><br>%{y:.1f}%<extra>%{data.name}</extra>'
+        });
+
+        // 4. Future Pipeline (>= 2026)
+        const futureYears = years.filter(y => parseInt(y) >= 2026);
+        pipelineTraces.push({
+            x: futureYears,
+            y: futureYears.map(y => infraData.yearlyData[y].categories[cat]?.allocation || 0),
+            name: cat,
+            type: 'bar',
+            marker: { color: catColor },
+            hovertemplate: '<b>%{x}</b><br>%{y:$,.0f}<extra>%{data.name}</extra>'
+        });
+    });
+
+    const [isExporting, setIsExporting] = useState(false);
+
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const response = await fetch('/api/infra-data/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filters, clickKey: latestClickKey })
+            });
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `STRIDE_Infra_Report_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (error) {
+            console.error("Export failed:", error);
+        } finally {
+            setIsExporting(false);
         }
-    ];
+    };
 
     return (
-        <div className="p-6 h-full overflow-y-auto w-full bg-[#f8fafc] flex flex-col">
-            <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
+        <div className="p-6 h-full overflow-y-auto w-full bg-[#f8fafc] flex flex-col gap-6">
+            <div className="flex items-start justify-between flex-wrap gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-[#003366] mb-1">Infrastructure & Education Facilities</h2>
-                    <p className="text-gray-500 text-sm">Analyze structural resource distribution, project statuses, and historical funding trends.</p>
+                    <p className="text-gray-500 text-sm">Analyze structural resource distribution, project statuses, and completion rates.</p>
+                </div>
+                <button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="bg-[#003366] hover:bg-[#002244] text-white px-4 py-2 rounded shadow flex items-center gap-2 font-bold text-sm transition-colors disabled:opacity-50"
+                >
+                    <Building size={16} /> {isExporting ? 'EXPORTING...' : 'EXPORT CSV'}
+                </button>
+            </div>
+
+            {/* Dynamic ValueBoxes */}
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+                <div className="bg-[#003366] border border-[#002244] rounded-xl p-5 shadow-sm min-w-[200px] text-white flex-shrink-0">
+                    <div className="text-xs font-bold uppercase text-[#FFB81C] mb-1">Total Active Projects</div>
+                    <div className="text-3xl font-bold">{infraData.summary.totalProjects.toLocaleString()}</div>
+                </div>
+                {years.map(y => (
+                    <div key={y} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm min-w-[200px] flex-shrink-0">
+                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">{y} Total Allocation</div>
+                        <div className="text-2xl font-bold text-[#003366]">
+                            {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(infraData.yearlyData[y].total_allocation)}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Chart 1: Total Allocation */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col min-h-[350px]">
+                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><Building size={16} className="text-[#003366]" /> Total Allocation</h3>
+                    <div className="flex-1 w-full relative">
+                        <Plot
+                            data={allocationTraces.filter(t => t.y.some(v => v > 0))}
+                            layout={{ ...layoutStyling, barmode: 'stack', hovermode: 'closest' }}
+                            useResizeHandler
+                            className="w-full h-full absolute inset-0"
+                            onClick={(e) => handleChartClick(e, 'allocation')}
+                        />
+                    </div>
+                </div>
+
+                {/* Chart 2: Allocation Trend */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col min-h-[350px]">
+                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><TrendingUp size={16} className="text-[#003366]" /> Allocation Trend</h3>
+                    <div className="flex-1 w-full relative">
+                        <Plot
+                            data={trendTraces.filter(t => t.y.some(v => v > 0))}
+                            layout={{ ...layoutStyling, hovermode: 'closest' }}
+                            useResizeHandler
+                            className="w-full h-full absolute inset-0"
+                            onClick={(e) => handleChartClick(e, 'trend')}
+                        />
+                    </div>
+                </div>
+
+                {/* Chart 3: Completion Rate */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col min-h-[350px]">
+                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><Pickaxe size={16} className="text-[#003366]" /> Average Completion Rate</h3>
+                    <div className="flex-1 w-full relative">
+                        <Plot
+                            data={completionTraces.filter(t => t.y.some(v => v > 0))}
+                            layout={{ ...layoutStyling, barmode: 'group', yaxis: { title: 'Completion %', range: [0, 100] }, hovermode: 'closest' }}
+                            useResizeHandler
+                            className="w-full h-full absolute inset-0"
+                            onClick={(e) => handleChartClick(e, 'completion')}
+                        />
+                    </div>
+                </div>
+
+                {/* Chart 4: Future Pipeline */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col min-h-[350px]">
+                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><Building size={16} className="text-[#003366]" /> Future Pipeline Projections</h3>
+                    <div className="flex-1 w-full relative">
+                        <Plot
+                            data={pipelineTraces.filter(t => t.y.some(v => v > 0))}
+                            layout={{ ...layoutStyling, barmode: 'stack', hovermode: 'closest' }}
+                            useResizeHandler
+                            className="w-full h-full absolute inset-0"
+                            onClick={(e) => handleChartClick(e, 'pipeline')}
+                        />
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[500px]">
-                {/* Left Column - Allocations */}
-                <div className="lg:col-span-2 flex flex-col gap-6 h-full min-h-[400px]">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col h-full">
-                        <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><Building size={18} className="text-[#003366]" /> Allocation Overview</h3>
-                        <div className="flex-1 min-h-0 relative w-full h-full">
-                            <Plot data={allocationData} layout={{ ...layoutStyling, barmode: 'stack' }} useResizeHandler className="w-full h-full" />
+            {/* Drilldown Data Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col mt-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <Building size={16} className="text-[#003366]" />
+                        Project Detail Drilldown
+                    </h3>
+                    {latestClickKey && (
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-full border border-blue-200">
+                                Filtering: {latestClickKey.year} - {latestClickKey.category} ({latestClickKey.chartType})
+                            </span>
+                            <button
+                                onClick={() => setLatestClickKey(null)}
+                                className="text-xs font-bold text-red-600 hover:text-red-800 underline transition-colors"
+                            >
+                                Clear Selection
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col h-full">
-                        <h3 className="font-bold text-gray-800 mb-2">Funding Trends (5-Year Historical)</h3>
-                        <div className="flex-1 min-h-0 relative w-full h-full">
-                            <Plot data={trendData} layout={layoutStyling} useResizeHandler className="w-full h-full" />
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Right Column - Status */}
-                <div className="flex flex-col gap-6 h-full min-h-[400px]">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col h-1/2">
-                        <h3 className="font-bold text-gray-800 mb-2">Project Completion Overview</h3>
-                        <div className="flex-1 min-h-0 relative w-full h-full flex justify-center">
-                            <Plot data={completionData} layout={{ ...layoutStyling, showlegend: true, legend: { orientation: 'h', y: -0.2 } }} useResizeHandler className="w-full h-full" />
-                        </div>
-                    </div>
-
-                    <div className="bg-[#003366] rounded-xl shadow-sm border border-[#002244] p-6 text-white h-1/2 flex flex-col justify-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 opacity-10 p-4">
-                            <Building size={120} />
-                        </div>
-                        <h3 className="font-bold text-[#FFB81C] mb-2 relative z-10">System Alert</h3>
-                        <p className="text-sm text-gray-200 mb-4 relative z-10">45 projects in {filters.region === 'All Regions' ? 'National Scope' : filters.region} are flagged for severe delay due to extreme weather constraints.</p>
-                        <button className="bg-white text-[#003366] hover:bg-gray-100 px-4 py-2 rounded font-bold text-sm self-start transition-colors relative z-10 shadow-md">
-                            View Flagged Projects
-                        </button>
-                    </div>
+                <div className="relative border rounded-lg overflow-hidden">
+                    {loadingProjects ? (
+                        <div className="h-64 flex items-center justify-center text-gray-400">Loading Projects Data...</div>
+                    ) : (
+                        <DataTable
+                            columns={[
+                                { name: "Region", selector: row => row.region, sortable: true, width: '100px' },
+                                { name: "Division", selector: row => row.division, sortable: true, width: '150px' },
+                                { name: "School", selector: row => row.schoolname, sortable: true, wrap: true },
+                                { name: "Year", selector: row => row.year, sortable: true, width: '80px', center: true },
+                                { name: "Category", selector: row => row.category, sortable: true, width: '160px' },
+                                {
+                                    name: "Allocation",
+                                    selector: row => row.allocation,
+                                    sortable: true,
+                                    right: true,
+                                    width: '140px',
+                                    cell: row => <span className="font-bold text-[#003366]">{new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(row.allocation)}</span>
+                                },
+                                {
+                                    name: "Status",
+                                    selector: row => row.completion_status,
+                                    sortable: true,
+                                    width: '120px',
+                                    cell: row => (
+                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${(row.completion_status || '').toLowerCase().includes('complet') ? 'bg-green-100 text-green-800' :
+                                            (row.completion_status || '').toLowerCase().includes('ongo') ? 'bg-orange-100 text-orange-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                            {row.completion_status || 'Unknown'}
+                                        </span>
+                                    )
+                                }
+                            ]}
+                            data={projectData}
+                            pagination
+                            highlightOnHover
+                            pointerOnHover
+                            fixedHeader
+                            noDataComponent={<div className="p-10 text-gray-400 font-medium">No projects found. Adjust your filters or click a chart to explore data.</div>}
+                            customStyles={{
+                                headRow: { style: { backgroundColor: '#fcfcfc', borderBottom: '1px solid #f1f5f9' } },
+                                rows: { style: { minHeight: '52px', '&:not(:last-child)': { borderBottom: '1px solid #f1f5f9' } } }
+                            }}
+                        />
+                    )}
                 </div>
-
             </div>
         </div>
     );

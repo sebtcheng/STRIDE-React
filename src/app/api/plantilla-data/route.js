@@ -1,50 +1,62 @@
 import { NextResponse } from 'next/server';
-import { initializeGlobalData } from '@/lib/dataService';
+import pool from '@/lib/db';
 
 export async function GET(request) {
     try {
-        const cache = await initializeGlobalData();
         const { searchParams } = new URL(request.url);
-        // Possible filter: ?position=Teacher I
-        const selectedPosition = searchParams.get('position');
 
-        if (!cache.dfGMIS) {
-            return NextResponse.json({ status: "error", message: "dfGMIS not loaded" }, { status: 503 });
+        const positions = searchParams.getAll('positions'); // Array of selected positions
+        const region = searchParams.get('region');
+
+        if (!positions || positions.length === 0) {
+            return NextResponse.json({ status: "success", data: { positionsData: [], groupingLevel: region ? 'Division' : 'Region', regionContext: region } });
         }
 
-        let totalFilled = 0;
-        let totalUnfilled = 0;
-        const positionBreakdown = {};
+        const groupingKey = region ? 'gmis_division' : 'gmis_region';
+        const displayKey = region ? 'Division' : 'Region'; // What frontend expects
+        const results = [];
 
-        // Aggregate and filter
-        cache.dfGMIS.forEach(row => {
-            const pos = row.Position;
-            if (!pos) return;
+        for (const pos of positions) {
+            let totalFilled = 0;
+            let totalUnfilled = 0;
 
-            // If a specific position is requested, skip non-matching rows
-            if (selectedPosition && pos !== selectedPosition) return;
+            // Query DB directly for this position
+            let query = `
+                SELECT ${groupingKey} AS group_name, SUM(total_filled) AS filled, SUM(total_unfilled) AS unfilled
+                FROM gmis_filling
+                WHERE position = $1
+            `;
+            const params = [pos];
 
-            const filled = Number(row['Total.Filled']) || 0;
-            const unfilled = Number(row['Total.Unfilled']) || 0;
-
-            totalFilled += filled;
-            totalUnfilled += unfilled;
-
-            if (!positionBreakdown[pos]) {
-                positionBreakdown[pos] = { filled: 0, unfilled: 0 };
+            if (region) {
+                query += ` AND gmis_region = $2`;
+                params.push(region);
             }
-            positionBreakdown[pos].filled += filled;
-            positionBreakdown[pos].unfilled += unfilled;
-        });
 
-        // Prepare pie chart or bar chart data based on top 10 positions
-        const sortedPositions = Object.keys(positionBreakdown)
-            .sort((a, b) => (positionBreakdown[b].filled + positionBreakdown[b].unfilled) - (positionBreakdown[a].filled + positionBreakdown[a].unfilled))
-            .slice(0, 10); // top 10 positions by volume
+            query += ` GROUP BY ${groupingKey} ORDER BY SUM(total_filled + total_unfilled) DESC`;
 
-        return NextResponse.json({
-            status: "success",
-            data: {
+            const dbRes = await pool.query(query, params);
+
+            const groupings = [];
+            const filledData = [];
+            const unfilledData = [];
+
+            dbRes.rows.forEach(row => {
+                if (!row.group_name || row.group_name === '<not available>' || row.group_name === 'Unknown') return;
+
+                const f = Number(row.filled) || 0;
+                const u = Number(row.unfilled) || 0;
+
+                totalFilled += f;
+                totalUnfilled += u;
+
+                groupings.push(row.group_name);
+                filledData.push(f);
+                unfilledData.push(u);
+            });
+
+            results.push({
+                position: pos,
                 summary: {
                     totalFilled,
                     totalUnfilled,
@@ -52,10 +64,19 @@ export async function GET(request) {
                     fillRate: totalFilled + totalUnfilled > 0 ? ((totalFilled / (totalFilled + totalUnfilled)) * 100).toFixed(1) : 0
                 },
                 chartData: {
-                    positions: sortedPositions,
-                    filled: sortedPositions.map(p => positionBreakdown[p].filled),
-                    unfilled: sortedPositions.map(p => positionBreakdown[p].unfilled)
+                    groupings: groupings,
+                    filled: filledData,
+                    unfilled: unfilledData
                 }
+            });
+        }
+
+        return NextResponse.json({
+            status: "success",
+            data: {
+                positionsData: results,
+                groupingLevel: displayKey, // Keep frontend happy
+                regionContext: region
             }
         });
     } catch (error) {

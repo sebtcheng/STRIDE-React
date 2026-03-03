@@ -121,6 +121,7 @@ export default function QuickSearchTab({ filters }) {
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         <DataTable
+                            keyField="unique_key"
                             columns={columns}
                             data={searchResults}
                             onRowClicked={handleSelection}
@@ -130,6 +131,19 @@ export default function QuickSearchTab({ filters }) {
                             fixedHeader
                             progressPending={loadingSearch}
                             noDataComponent={<div className="p-20 text-gray-400 font-medium">Use Sidebar to filter and Search</div>}
+                            conditionalRowStyles={[
+                                {
+                                    when: row => selectedSchool && row.id === selectedSchool.id,
+                                    style: {
+                                        backgroundColor: '#eff6ff',
+                                        color: '#1e3a8a',
+                                        fontWeight: 'bold',
+                                        '&:hover': {
+                                            cursor: 'pointer',
+                                        },
+                                    },
+                                }
+                            ]}
                             customStyles={{
                                 headRow: { style: { backgroundColor: '#fcfcfc', borderBottom: '1px solid #f1f5f9' } },
                                 rows: { style: { minHeight: '52px', '&:not(:last-child)': { borderBottom: '1px solid #f1f5f9' } } }
@@ -176,8 +190,13 @@ export default function QuickSearchTab({ filters }) {
                                     </div>
                                 </div>
                             </div>
-                            <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/20 backdrop-blur-sm transition-all">
-                                <Download size={14} /> DOWNLOAD SUMMARY (PDF)
+                            <button
+                                onClick={() => {
+                                    window.open(`/api/quick-search/export-profile?schoolId=${selectedSchool.id}`, '_blank');
+                                }}
+                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 border border-white/20 backdrop-blur-sm transition-all"
+                            >
+                                <Download size={14} /> DOWNLOAD SUMMARY (HTML)
                             </button>
                         </div>
 

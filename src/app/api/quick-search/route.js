@@ -6,6 +6,9 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const query = searchParams.get('q') || '';
         const region = searchParams.get('region') || 'All Regions';
+        const division = searchParams.get('division') || '';
+        const district = searchParams.get('district') || '';
+        const municipality = searchParams.get('municipality') || '';
 
         // Build SQL Query with LEFT JOIN to EFD Masterlist for Infra Project data
         let sql = `
@@ -35,17 +38,26 @@ export async function GET(request) {
             params.push(region);
             sql += ` AND s.region = $${params.length}`;
         }
+        if (division) {
+            params.push(division);
+            sql += ` AND s.division = $${params.length}`;
+        }
+        if (district) {
+            params.push(district);
+            sql += ` AND s.legislative_district = $${params.length}`;
+        }
+        if (municipality) {
+            params.push(municipality);
+            sql += ` AND s.municipality = $${params.length}`;
+        }
 
         if (query) {
             params.push(`%${query}%`);
             sql += ` AND (
                 s.schoolname ILIKE $${params.length} OR 
-                s.division ILIKE $${params.length} OR 
-                s.municipality ILIKE $${params.length} OR 
                 CAST(s.schoolid AS TEXT) ILIKE $${params.length}
             )`;
         }
-
 
         const result = await pool.query(sql, params);
 
@@ -53,8 +65,9 @@ export async function GET(request) {
             status: "success",
             data: {
                 totalMatched: result.rowCount,
-                rows: result.rows.map(row => ({
+                rows: result.rows.map((row, index) => ({
                     ...row,
+                    unique_key: `${row.id}_${index}`,
                     infra_projects: Number(row.infra_projects),
                     total_infra_value: Number(row.total_infra_value)
                 }))

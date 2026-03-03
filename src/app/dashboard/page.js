@@ -37,6 +37,8 @@ export default function DashboardPage() {
         q: '',
         categoricalFilters: {}, // e.g. { ownership: 'Private' }
         selected_metrics: [], // Array to hold dynamically selected columns
+        selected_positions: [], // Array to hold dynamically selected positions
+        plantilla_preset: null, // Hold the plantilla focus state
         resource_view_mode: 'Standard',
         resource_mapping_type: 'Teaching Deployment',
         data_explorer_domains: {
@@ -191,7 +193,7 @@ export default function DashboardPage() {
                         {activeTab === "interactive" && <InteractiveDashboardTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
                         {activeTab === "locator" && <SchoolLocatorTab filters={filters} />}
                         {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} />}
-                        {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} />}
+                        {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
                         {activeTab === "infra" && <InfrastructureTab filters={filters} />}
                         {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
                         {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} />}

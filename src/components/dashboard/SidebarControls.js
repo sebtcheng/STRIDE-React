@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Filter, Settings2, Search, Users, Home, Building, CheckSquare, AlertTriangle, Download, ListChecks, ArrowLeft, FileDown } from "lucide-react";
+import { Filter, Settings2, Search, Users, Home, Building, CheckSquare, AlertTriangle, Download, ListChecks, ArrowLeft, FileDown, MapPin } from "lucide-react";
 
-const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleMetricToggle }) => {
-    const selectedCount = groups.flatMap(g => g.options).filter(o => (filters?.selected_metrics || []).includes(o.id)).length;
+const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleMetricToggle, selectedKey = "selected_metrics" }) => {
+    const selectedArray = filters?.[selectedKey] || [];
+    const selectedCount = groups.flatMap(g => g.options).filter(o => selectedArray.includes(o.id)).length;
 
     return (
         <div className="mb-4 relative border border-gray-300 rounded-lg bg-gray-50">
@@ -27,7 +28,7 @@ const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleM
                                     <label key={opt.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors w-full group">
                                         <input
                                             type="checkbox"
-                                            checked={(filters?.selected_metrics || []).includes(opt.id)}
+                                            checked={selectedArray.includes(opt.id)}
                                             onChange={() => handleMetricToggle(opt.id)}
                                             className="w-4 h-4 rounded border-gray-400 text-[#003366] focus:ring-[#003366] cursor-pointer"
                                         />
@@ -74,16 +75,41 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
         analyticsMap: []
     });
 
+    const [schemaAA, setSchemaAA] = useState({ ranges: {} });
+
     useEffect(() => {
-        fetch("/api/dropdowns")
+        // Fetch Universal App Schema
+        const url = new URL(window.location.origin + "/api/dropdowns");
+        if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
+        if (filters.division) url.searchParams.append("division", filters.division);
+
+        fetch(url)
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
-                    setDbSchema(res.data);
+                    setDbSchema(prev => ({
+                        ...prev,
+                        uniRegions: res.data.uniRegions || prev.uniRegions,
+                        uniDivisions: res.data.uniDivisions || prev.uniDivisions,
+                        uniDistricts: res.data.uniDistricts || prev.uniDistricts,
+                        uniMunicipalities: res.data.uniMunicipalities || prev.uniMunicipalities,
+                        gmisPositions: res.data.gmisPositions || prev.gmisPositions,
+                        efdCategories: res.data.efdCategories || prev.efdCategories
+                    }));
                 }
             })
             .catch(err => console.error("Error piping dataset globals:", err));
-    }, []);
+
+        // Fetch Advanced Analytics Specific Schema
+        fetch('/api/analytics-schema')
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === "success" && res.data) {
+                    setSchemaAA(res.data);
+                }
+            })
+            .catch(err => console.error("Error fetching analytics schema:", err));
+    }, [filters.region, filters.division]);
 
     const foci = [
         { name: "Teacher Focus", icon: <Users size={18} /> },
@@ -143,6 +169,52 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
             current.add(metricId);
         }
         setFilters({ dashboard_preset: null, selected_metrics: Array.from(current) });
+    };
+
+    const handlePlantillaPresetToggle = (presetName) => {
+        let matched = [];
+        if (presetName === "Teacher") {
+            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Teacher") && !pos.includes("Master") && !pos.includes("Head"));
+        } else if (presetName === "Master Teacher") {
+            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Master Teacher"));
+        } else if (presetName === "Principal") {
+            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Principal"));
+        } else if (presetName === "Admin Officer") {
+            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Administrative Officer") || pos.includes("Admin Officer"));
+        }
+
+        // Uncheck if same preset clicked
+        if (filters.plantilla_preset === presetName) {
+            setFilters({ plantilla_preset: null, selected_positions: [] });
+        } else {
+            setFilters({ plantilla_preset: presetName, selected_positions: matched });
+        }
+    };
+
+    const handlePositionToggle = (posId) => {
+        const current = new Set(filters.selected_positions || []);
+        if (current.has(posId)) {
+            current.delete(posId);
+        } else {
+            current.add(posId);
+        }
+        setFilters({ selected_positions: Array.from(current), plantilla_preset: null });
+    };
+
+    const handleGenericMultiToggle = (key, val) => {
+        const current = new Set(filters[key] || []);
+        if (current.has(val)) {
+            current.delete(val);
+        } else {
+            current.add(val);
+        }
+
+        // Cascading reset logic: If regions change, reset divisions.
+        if (key === 'infra_regions') {
+            setFilters({ [key]: Array.from(current), infra_divisions: [] });
+        } else {
+            setFilters({ [key]: Array.from(current) });
+        }
     };
 
     return (
@@ -242,32 +314,231 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                 {/* 1C. Plantilla Positions */}
                 {activeTab === "plantilla" && (
                     <section>
-                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Position Presets</h3>
-                        <div className="space-y-1.5 mb-6">
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Position Presets</h3>
+                        <div className="space-y-2 mb-6">
                             {plantillaFoci.map((p) => (
-                                <label key={p.name} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer">
-                                    <input type="checkbox" className="rounded text-[#003366] focus:ring-[#003366]" />
-                                    <span className="text-sm font-medium text-gray-700">{p.name}</span>
+                                <label key={p.name} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors border ${filters.plantilla_preset === p.name ? 'bg-blue-50 border-blue-200 text-[#003366]' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                                    <input
+                                        type="radio"
+                                        name="plantillaPreset"
+                                        checked={filters.plantilla_preset === p.name}
+                                        onChange={() => handlePlantillaPresetToggle(p.name)}
+                                        className="w-4 h-4 text-[#003366] border-gray-300 focus:ring-[#003366] bg-white cursor-pointer"
+                                    />
+                                    <span className="text-sm font-bold">{p.name}</span>
                                 </label>
                             ))}
                         </div>
-                        <SelectDropdown label="Specific Title Lookup" field="position" placeholder="Search positions..." options={dbSchema.gmisPositions} filters={filters} setFilters={setFilters} />
+
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between items-center">
+                            Specific Positions
+                            {(filters.selected_positions || []).length > 0 && !filters.plantilla_preset && (
+                                <button onClick={() => setFilters({ selected_positions: [] })} className="text-[9px] text-red-500 hover:underline">Clear</button>
+                            )}
+                        </h3>
+                        <MultiSelectDropdown
+                            title="Select Plantilla Items"
+                            groups={[{ group: "Positions", options: dbSchema.gmisPositions.map(p => ({ id: p, label: p })) }]}
+                            isOpen={openDropdown === "plantilla_positions"}
+                            onToggle={() => setOpenDropdown(openDropdown === "plantilla_positions" ? null : "plantilla_positions")}
+                            filters={filters}
+                            handleMetricToggle={handlePositionToggle}
+                            selectedKey="selected_positions"
+                        />
                     </section>
                 )}
 
                 {/* 1D. Infrastructure and Education Facilities */}
                 {activeTab === "infra" && (
-                    <section>
-                        <SelectDropdown label="Program Category" field="infra_category" options={dbSchema.efdCategories} filters={filters} setFilters={setFilters} />
-                        <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
-                            <h4 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Status Filter</h4>
-                            <div className="space-y-1">
-                                {["Ongoing", "Completed", "Cancelled", "Suspended"].map(s => (
-                                    <label key={s} className="flex items-center gap-2 text-xs text-orange-800">
-                                        <input type="checkbox" defaultChecked className="rounded text-orange-600" /> {s}
-                                    </label>
-                                ))}
-                            </div>
+                    <section className="space-y-4">
+                        <MultiSelectDropdown
+                            title="Filter by Region"
+                            groups={[{ group: "Regions", options: dbSchema.uniRegions.map(p => ({ id: p, label: p })) }]}
+                            isOpen={openDropdown === "infra_regions"}
+                            onToggle={() => setOpenDropdown(openDropdown === "infra_regions" ? null : "infra_regions")}
+                            filters={filters}
+                            handleMetricToggle={(val) => handleGenericMultiToggle("infra_regions", val)}
+                            selectedKey="infra_regions"
+                        />
+                        <MultiSelectDropdown
+                            title="Filter by Division"
+                            groups={[{ group: "Divisions", options: dbSchema.uniDivisions.map(p => ({ id: p, label: p })) }]}
+                            isOpen={openDropdown === "infra_divisions"}
+                            onToggle={() => setOpenDropdown(openDropdown === "infra_divisions" ? null : "infra_divisions")}
+                            filters={filters}
+                            handleMetricToggle={(val) => handleGenericMultiToggle("infra_divisions", val)}
+                            selectedKey="infra_divisions"
+                        />
+                        <MultiSelectDropdown
+                            title="Program Category"
+                            groups={[{ group: "Funding Programs", options: dbSchema.efdCategories.map(p => ({ id: p, label: p })) }]}
+                            isOpen={openDropdown === "infra_categories"}
+                            onToggle={() => setOpenDropdown(openDropdown === "infra_categories" ? null : "infra_categories")}
+                            filters={filters}
+                            handleMetricToggle={(val) => handleGenericMultiToggle("infra_categories", val)}
+                            selectedKey="infra_categories"
+                        />
+                    </section>
+                )}
+
+                {/* 1E. Advanced Analytics Query Engine */}
+                {activeTab === "advanced_analytics" && (
+                    <section className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex justify-between items-center bg-[#003366] text-white p-3 rounded-xl shadow-md">
+                            <span className="text-[10px] font-black uppercase tracking-widest">Query Engine</span>
+                            <Settings2 size={14} className="opacity-80" />
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Selected Variables</p>
+                            {(filters.aa_variables || []).map((v, i) => {
+                                const isNumeric = schemaAA.ranges && Object.keys(schemaAA.ranges).includes(v.column);
+                                const isCategorical = schemaAA[v.column] !== undefined;
+
+                                return (
+                                    <div key={v.id} className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-3 relative shadow-sm">
+                                        <div className="flex gap-2 items-center">
+                                            <div className="flex-1">
+                                                <label className="text-[10px] font-bold text-[#003366] mb-1 block uppercase">Select Column</label>
+                                                <select
+                                                    value={v.column}
+                                                    onChange={(e) => {
+                                                        const newVars = [...(filters.aa_variables || [])];
+                                                        const newCol = e.target.value;
+                                                        newVars[i].column = newCol;
+
+                                                        // Auto-populate default min/max or selected values
+                                                        if (schemaAA.ranges && schemaAA.ranges[newCol]) {
+                                                            newVars[i].min = schemaAA.ranges[newCol][0];
+                                                            newVars[i].max = schemaAA.ranges[newCol][1];
+                                                            delete newVars[i].values;
+                                                        } else if (schemaAA[newCol]) {
+                                                            newVars[i].values = [...schemaAA[newCol]]; // Default to all selected
+                                                            delete newVars[i].min;
+                                                            delete newVars[i].max;
+                                                        }
+
+                                                        setFilters({ aa_variables: newVars });
+                                                    }}
+                                                    className="w-full bg-white border border-blue-200 rounded-lg p-2 text-xs text-gray-800 font-bold outline-none focus:ring-[#003366] focus:border-[#003366] transition-all"
+                                                >
+                                                    <option value="">-- Select Variable --</option>
+                                                    {[
+                                                        { val: "school_type", label: "School Type" },
+                                                        { val: "curricular_offering", label: "Curricular Offering" },
+                                                        { val: "with_buildable_space", label: "Buildable Space" },
+                                                        { val: "totalenrolment", label: "Total Enrolment" },
+                                                        { val: "totalteachers", label: "Total Teachers" },
+                                                        { val: "es_teachers", label: "ES Teachers" },
+                                                        { val: "jhs_teachers", label: "JHS Teachers" },
+                                                        { val: "shs_teachers", label: "SHS Teachers" },
+                                                        { val: "total_shortage", label: "Teacher Shortage" },
+                                                        { val: "classroom_shortage", label: "Classroom Shortage" },
+                                                        { val: "number_of_rooms_good_condition", label: "Rooms in Good Condition" }
+                                                    ].map(col => (
+                                                        <option key={col.val} value={col.val}>{col.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const newVars = (filters.aa_variables || []).filter((_, idx) => idx !== i);
+                                                    setFilters({ aa_variables: newVars });
+                                                }}
+                                                className="mt-5 p-2 bg-[#CE1126] text-white rounded-lg hover:bg-red-800 transition-colors shadow-sm flex items-center justify-center"
+                                                title="Remove Variable"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+
+                                        {/* Dynamic Sub-inputs based on Column Type */}
+                                        {isNumeric && (
+                                            <div className="flex gap-4 items-end">
+                                                <div className="flex-1">
+                                                    <label className="text-[10px] font-bold text-gray-600 block mb-1 uppercase">Min:</label>
+                                                    <input
+                                                        type="number"
+                                                        value={v.min !== undefined ? v.min : (schemaAA.ranges[v.column][0] || 0)}
+                                                        onChange={(e) => {
+                                                            const newVars = [...(filters.aa_variables || [])];
+                                                            newVars[i].min = Number(e.target.value);
+                                                            setFilters({ aa_variables: newVars });
+                                                        }}
+                                                        className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs focus:border-[#003366] outline-none"
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="text-[10px] font-bold text-gray-600 block mb-1 uppercase">Max:</label>
+                                                    <input
+                                                        type="number"
+                                                        value={v.max !== undefined ? v.max : (schemaAA.ranges[v.column][1] || 0)}
+                                                        onChange={(e) => {
+                                                            const newVars = [...(filters.aa_variables || [])];
+                                                            newVars[i].max = Number(e.target.value);
+                                                            setFilters({ aa_variables: newVars });
+                                                        }}
+                                                        className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs focus:border-[#003366] outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isCategorical && (
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-600 block mb-1 uppercase">Select Value(s):</label>
+                                                <div className="grid grid-cols-2 gap-2 mt-2 bg-white p-2 rounded border border-gray-200">
+                                                    {schemaAA[v.column].map(opt => (
+                                                        <label key={opt} className="flex items-center gap-2 text-[10px] cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={(v.values || schemaAA[v.column]).includes(opt)}
+                                                                onChange={(e) => {
+                                                                    const isChecked = e.target.checked;
+                                                                    const currentValues = v.values || [...schemaAA[v.column]];
+                                                                    const newVars = [...(filters.aa_variables || [])];
+
+                                                                    if (isChecked) {
+                                                                        newVars[i].values = [...currentValues, opt];
+                                                                    } else {
+                                                                        newVars[i].values = currentValues.filter(val => val !== opt);
+                                                                    }
+                                                                    setFilters({ aa_variables: newVars });
+                                                                }}
+                                                                className="rounded text-[#003366] focus:ring-[#003366]"
+                                                            />
+                                                            <span className="truncate">{opt}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {(filters.aa_variables || []).length === 0 && (
+                                <p className="text-xs italic text-gray-400">No variables structured yet. Add a filter to begin.</p>
+                            )}
+
+                            <button
+                                onClick={() => {
+                                    const newVars = [...(filters.aa_variables || []), { id: Date.now() + Math.random(), column: "" }];
+                                    setFilters({ aa_variables: newVars });
+                                }}
+                                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-[#003366] font-bold text-xs rounded-xl border border-gray-200 transition-colors shadow-sm"
+                            >
+                                + Add another variable
+                            </button>
+                        </div>
+
+                        <div className="pt-4 border-t border-gray-100 mt-4">
+                            <button
+                                onClick={() => setFilters({ aa_trigger: Date.now() })}
+                                className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-[#eab308] text-[#003366] font-black py-3 px-4 rounded-xl transition-all shadow-md text-[10px] uppercase tracking-wider"
+                            >
+                                <Settings2 size={16} /> Analyze and Plot
+                            </button>
                         </div>
                     </section>
                 )}
@@ -277,13 +548,19 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                     <section className="space-y-4">
                         <div className="flex items-center justify-between mb-4 bg-gray-100 p-1.5 rounded-lg">
                             <button
-                                onClick={() => setQuickSearchAdvanced(false)}
+                                onClick={() => {
+                                    setQuickSearchAdvanced(false);
+                                    setFilters({ q: '', region: 'All Regions', division: '', district: '', municipality: '' });
+                                }}
                                 className={`flex-1 text-[10px] font-bold py-1 rounded transition-all ${!quickSearchAdvanced ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`}
                             >
                                 SIMPLE
                             </button>
                             <button
-                                onClick={() => setQuickSearchAdvanced(true)}
+                                onClick={() => {
+                                    setQuickSearchAdvanced(true);
+                                    setFilters({ q: '', region: 'All Regions', division: '', district: '', municipality: '' });
+                                }}
                                 className={`flex-1 text-[10px] font-bold py-1 rounded transition-all ${quickSearchAdvanced ? 'bg-white text-[#003366] shadow-sm' : 'text-gray-500 hover:text-[#003366]'}`}
                             >
                                 ADVANCED
@@ -292,10 +569,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                         {quickSearchAdvanced && (
                             <div className="animate-in fade-in slide-in-from-top-2 space-y-1">
-                                <SelectDropdown label="Region" field="region" options={dbSchema.uniRegions} placeholder="All Regions" />
-                                <SelectDropdown label="Division" field="division" options={dbSchema.uniDivisions} />
-                                <SelectDropdown label="District" field="district" options={dbSchema.uniDistricts} />
-                                <SelectDropdown label="Municipality" field="municipality" options={dbSchema.uniMunicipalities} />
+                                <SelectDropdown label="Region" field="region" options={dbSchema.uniRegions} placeholder="All Regions" filters={filters} setFilters={setFilters} />
+                                <SelectDropdown label="Division" field="division" options={dbSchema.uniDivisions} filters={filters} setFilters={setFilters} />
+                                <SelectDropdown label="District" field="district" options={dbSchema.uniDistricts} filters={filters} setFilters={setFilters} />
+                                <SelectDropdown label="Municipality" field="municipality" options={dbSchema.uniMunicipalities} filters={filters} setFilters={setFilters} />
                             </div>
                         )}
 
@@ -315,13 +592,22 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             </div>
                         )}
 
-                        <button
-                            onClick={() => setFilters({ triggerSearch: Date.now() })}
-                            className="w-full flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md text-xs mt-2"
-                        >
-                            <Search size={14} />
-                            SHOW SELECTION
-                        </button>
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={() => setFilters({ q: '', region: 'All Regions', division: '', district: '', municipality: '' })}
+                                className="flex-1 text-xs font-bold py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-200 shadow-sm"
+                            >
+                                CLEAR
+                            </button>
+                            <button
+                                disabled={!filters.q && (!filters.region || filters.region === 'All Regions')}
+                                onClick={() => setFilters({ triggerSearch: Date.now() })}
+                                className="flex-[2] flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md text-xs"
+                            >
+                                <Search size={14} />
+                                SHOW SELECTION
+                            </button>
+                        </div>
                     </section>
                 )}
 
@@ -350,6 +636,8 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                     field="resource_mapping_type"
                                     options={["Teaching Deployment", "Infrastructure", "Senior High Industries", "Last Mile Schools"]}
                                     placeholder="Select Resource..."
+                                    filters={filters}
+                                    setFilters={setFilters}
                                 />
 
                                 {filters.resource_mapping_type === "Teaching Deployment" && (
@@ -367,7 +655,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                                 {filters.resource_mapping_type === "Infrastructure" && (
                                     <div className="space-y-3">
-                                        <SelectDropdown label="Infrastructure Project" field="infra_category" options={dbSchema.efdCategories} />
+                                        <SelectDropdown label="Infrastructure Project" field="infra_category" options={dbSchema.efdCategories} filters={filters} setFilters={setFilters} />
                                         <div className="grid grid-cols-2 gap-2">
                                             {["Completed", "Ongoing"].map(s => (
                                                 <button key={s} className="text-[9px] font-bold py-1.5 border border-gray-200 rounded hover:bg-white transition-colors">{s}</button>
@@ -376,7 +664,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                     </div>
                                 )}
 
-                                <SelectDropdown label="SDO / Division" field="division" options={dbSchema.uniDivisions} />
+                                <SelectDropdown label="SDO / Division" field="division" options={dbSchema.uniDivisions} filters={filters} setFilters={setFilters} />
 
                                 <button
                                     onClick={() => setFilters({ mapping_trigger: Date.now() })}
@@ -393,6 +681,8 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                     field="active_layer"
                                     options={["All Schools", "Last Mile School", "Teacher Shortage", "Classroom Shortage"]}
                                     placeholder="Choose Layer..."
+                                    filters={filters}
+                                    setFilters={setFilters}
                                 />
                                 <div className="p-4 bg-gray-900 rounded-xl border border-gray-800 text-white">
                                     <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Layer Overview</p>
@@ -447,7 +737,26 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                     <FileDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
                     Generate Intelligence Report
                 </button>
-                <button className="w-full group flex items-center justify-center gap-2 bg-[#CE1126] hover:bg-red-800 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md text-sm">
+                <button onClick={() => {
+                    if (activeTab === "plantilla") {
+                        const url = new URL(window.location.origin + "/api/plantilla-data/report");
+                        if (filters.drillLevel === "Region" || filters.drillLevel === "Division" || filters.drillLevel === "DistrictGroup") {
+                            if (filters.region && filters.region !== "All Regions") {
+                                url.searchParams.append("region", filters.region);
+                            }
+                        }
+                        const selected = filters.selected_positions || [];
+                        if (selected.length === 0) {
+                            alert("Please select at least one position to export.");
+                            return;
+                        }
+                        selected.forEach(pos => url.searchParams.append("positions", pos));
+                        window.open(url.toString(), "_blank");
+                    } else {
+                        alert("Export functionality is currently customized per module. Please try another tab.");
+                    }
+                }}
+                    className="w-full group flex items-center justify-center gap-2 bg-[#CE1126] hover:bg-red-800 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md text-sm">
                     <Download size={18} className="group-hover:animate-bounce" />
                     Export Current View
                 </button>

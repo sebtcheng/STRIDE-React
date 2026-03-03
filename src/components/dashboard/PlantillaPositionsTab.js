@@ -2,95 +2,182 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
-import { Users, UserPlus, UserCheck, AlertOctagon } from "lucide-react";
+import { Users, UserPlus, UserCheck, AlertOctagon, ArrowLeft } from "lucide-react";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-gray-400">Loading Chart Engine...</div> });
 
-export default function PlantillaPositionsTab({ filters }) {
+export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
     const [data, setData] = useState({
-        summary: { totalFilled: 0, totalUnfilled: 0, totalItems: 0, fillRate: 0 },
-        chartData: { positions: [], filled: [], unfilled: [] },
+        positionsData: [],
+        groupingLevel: "Region",
         loading: true
     });
 
     useEffect(() => {
         const url = new URL(window.location.origin + "/api/plantilla-data");
-        if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
-        if (filters.division) url.searchParams.append("division", filters.division);
 
+        if (filters.drillLevel === "Region" || filters.drillLevel === "Division" || filters.drillLevel === "DistrictGroup") {
+            if (filters.region && filters.region !== "All Regions") {
+                url.searchParams.append("region", filters.region);
+            }
+        }
+
+        const selected = filters.selected_positions || [];
+        if (selected.length === 0) {
+            setData({ positionsData: [], groupingLevel: "Region", loading: false });
+            return;
+        }
+
+        selected.forEach(pos => url.searchParams.append("positions", pos));
+
+        setData(prev => ({ ...prev, loading: true }));
         fetch(url)
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
                     setData({ ...res.data, loading: false });
+                } else {
+                    setData(prev => ({ ...prev, loading: false }));
                 }
             })
-            .catch(err => console.error("Error fetching plantilla data:", err));
-    }, [filters.region, filters.division]);
+            .catch(err => {
+                console.error("Error fetching plantilla data:", err);
+                setData(prev => ({ ...prev, loading: false }));
+            });
+    }, [filters.region, filters.selected_positions, filters.drillLevel]);
 
+    const handleChartClick = (e, groupingLevel) => {
+        if (!e.points || e.points.length === 0) return;
+        const clickedName = e.points[0].label; // The y-axis label
+
+        if (groupingLevel === "Region") {
+            drillDown("Region", clickedName, "region");
+        } else if (groupingLevel === "Division") {
+            drillDown("Division", clickedName, "division");
+        }
+    };
+
+    if (data.loading) {
+        return <div className="p-6 flex items-center justify-center h-full text-gray-500">Loading Plantilla Data...</div>;
+    }
+
+    if (!data.positionsData || data.positionsData.length === 0) {
+        return (
+            <div className="p-6 h-full flex flex-col items-center justify-center bg-[#f8fafc]">
+                <AlertOctagon size={48} className="text-gray-300 mb-4" />
+                <h2 className="text-xl font-bold text-gray-500">No Positions Selected</h2>
+                <p className="text-sm text-gray-400 mt-2">Use the Sidebar Controls to select Plantilla positions to analyze.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 h-full overflow-y-auto w-full bg-[#f8fafc] space-y-8 pb-20">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-[#003366] mb-1">Plantilla Item Deployment</h2>
+                    <p className="text-gray-500 text-sm">Real-time breakdown of filled versus unfilled national positions across {data.groupingLevel}s.</p>
+                </div>
+                {filters.drillLevel !== 'National' && (
+                    <button
+                        onClick={goBack}
+                        className="flex items-center gap-2 bg-[#CE1126] hover:bg-red-800 text-white px-4 py-2 rounded-lg shadow-sm font-bold text-sm transition-colors"
+                    >
+                        <ArrowLeft size={16} /> GO BACK
+                    </button>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {data.positionsData.map((posData, idx) => (
+                    <PositionCard
+                        key={idx}
+                        posData={posData}
+                        groupingLevel={data.groupingLevel}
+                        onChartClick={(e) => handleChartClick(e, data.groupingLevel)}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function PositionCard({ posData, groupingLevel, onChartClick }) {
     const kpis = [
-        { title: "Total National Items", value: data.summary.totalItems.toLocaleString(), icon: <Users className="text-[#003366]" />, color: "bg-blue-50 text-blue-800" },
-        { title: "Filled Positions", value: data.summary.totalFilled.toLocaleString(), icon: <UserCheck className="text-green-600" />, color: "bg-green-50 text-green-800" },
-        { title: "Unfilled Positions", value: data.summary.totalUnfilled.toLocaleString(), icon: <UserPlus className="text-orange-600" />, color: "bg-orange-50 text-orange-800" },
-        { title: "National Fill Rate", value: `${data.summary.fillRate}%`, icon: <AlertOctagon className={data.summary.fillRate > 90 ? "text-green-600" : "text-red-500"} />, color: "bg-gray-50 text-gray-800" },
+        { title: "Total Items", value: posData.summary.totalItems.toLocaleString(), icon: <Users className="text-[#003366]" />, color: "bg-blue-50 text-blue-800" },
+        { title: "Filled Positions", value: posData.summary.totalFilled.toLocaleString(), icon: <UserCheck className="text-green-600" />, color: "bg-green-50 text-green-800" },
+        { title: "Unfilled Positions", value: posData.summary.totalUnfilled.toLocaleString(), icon: <UserPlus className="text-orange-600" />, color: "bg-orange-50 text-orange-800" },
+        { title: "Efficiency Rate", value: `${posData.summary.fillRate}%`, icon: <AlertOctagon className={posData.summary.fillRate > 90 ? "text-green-600" : "text-red-500"} />, color: "bg-gray-50 text-gray-800" },
     ];
+
+    const textLabels = posData.chartData.groupings.map((g, i) => {
+        const total = posData.chartData.filled[i] + posData.chartData.unfilled[i];
+        const rate = total > 0 ? ((posData.chartData.filled[i] / total) * 100).toFixed(1) : 0;
+        return `${total.toLocaleString()} (${rate}%)`;
+    });
 
     const chartConfig = [
         {
-            y: data.chartData.positions,
-            x: data.chartData.filled,
+            y: posData.chartData.groupings,
+            x: posData.chartData.filled,
             type: 'bar',
             orientation: 'h',
             marker: { color: '#003366' },
             name: 'Filled'
         },
         {
-            y: data.chartData.positions,
-            x: data.chartData.unfilled,
+            y: posData.chartData.groupings,
+            x: posData.chartData.unfilled,
             type: 'bar',
             orientation: 'h',
             marker: { color: '#FFB81C' },
-            name: 'Unfilled'
+            name: 'Unfilled',
+            text: textLabels,
+            textposition: 'outside',
+            cliponaxis: false
         }
     ];
 
+    const maxChartHeight = Math.max(300, posData.chartData.groupings.length * 40);
+
     return (
-        <div className="p-6 h-full overflow-y-auto w-full bg-[#f8fafc]">
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-[#003366] mb-1">Plantilla Item Deployment</h2>
-                <p className="text-gray-500 text-sm">Real-time breakdown of filled versus unfilled national positions extracted from dfGMIS.</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-[#003366] text-white px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-lg uppercase tracking-wide">{posData.position}</h3>
+                <span className="text-xs bg-white/20 px-2 py-1 rounded font-medium tracking-widest">{groupingLevel.toUpperCase()} BREAKDOWN</span>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {kpis.map((kpi, idx) => (
-                    <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-[#003366] transition-colors relative overflow-hidden">
-                        <div className={`absolute top-0 right-0 p-3 rounded-bl-3xl ${kpi.color}`}>
-                            {kpi.icon}
+            <div className="p-5">
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    {kpis.map((kpi, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-lg border border-gray-100 p-4 hover:border-blue-200 transition-colors relative overflow-hidden">
+                            <div className={`absolute top-0 right-0 p-2 rounded-bl-xl ${kpi.color}`}>
+                                {kpi.icon}
+                            </div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{kpi.title}</p>
+                            <h4 className="text-2xl font-bold text-gray-900">{kpi.value}</h4>
                         </div>
-                        <h3 className="text-3xl font-bold text-gray-900 mb-1">{kpi.value}</h3>
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wide pr-8">{kpi.title}</p>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
 
-            {/* Main Bar Chart */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col h-[500px]">
-                <h3 className="font-bold text-gray-800 mb-2">Top Volume Positions (Filled vs Gap)</h3>
-                <div className="flex-1 min-h-0 relative w-full h-full">
+                <div className="w-full relative" style={{ height: `${maxChartHeight}px` }}>
                     <Plot
                         data={chartConfig}
                         layout={{
                             barmode: 'stack',
                             autosize: true,
-                            margin: { l: 150, r: 20, t: 20, b: 40 },
+                            margin: { l: 150, r: 90, t: 10, b: 40 },
                             font: { family: 'Inter, sans-serif' },
-                            yaxis: { autorange: 'reversed' },
+                            yaxis: { autorange: 'reversed', tickfont: { size: 10 } },
+                            xaxis: { title: 'Number of Positions' },
                             paper_bgcolor: 'transparent',
-                            plot_bgcolor: 'transparent'
+                            plot_bgcolor: 'transparent',
+                            showlegend: true,
+                            legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' }
                         }}
                         useResizeHandler
                         className="w-full h-full"
+                        onClick={onChartClick}
                     />
                 </div>
             </div>

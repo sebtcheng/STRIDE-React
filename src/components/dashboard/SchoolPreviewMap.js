@@ -8,13 +8,27 @@ import "leaflet.markercluster";
 import { renderToStaticMarkup } from "react-dom/server";
 import { School } from "lucide-react";
 
-function ChangeView({ center, zoom }) {
+function ChangeView({ center, zoom, active }) {
     const map = useMap();
     useEffect(() => {
-        if (center && center[0] && center[1]) {
+        if (active && center && center[0] && center[1]) {
             map.flyTo(center, zoom, { duration: 1.5 });
         }
-    }, [center, zoom, map]);
+    }, [center, zoom, map, active]);
+    return null;
+}
+
+function FitBounds({ results, active }) {
+    const map = useMap();
+    useEffect(() => {
+        if (!active && results && results.length > 0) {
+            const valid = results.filter(s => s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
+            if (valid.length > 0) {
+                const bounds = L.latLngBounds(valid.map(s => [Number(s.lat), Number(s.lng)]));
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            }
+        }
+    }, [results, active, map]);
     return null;
 }
 
@@ -103,7 +117,8 @@ export default function SchoolPreviewMap({ lat, lng, name, results = [], onMarke
             style={{ height: '100%', width: '100%' }}
             className="z-0"
         >
-            <ChangeView center={center} zoom={zoom} />
+            <ChangeView center={center} zoom={zoom} active={!!targetSchoolId} />
+            <FitBounds results={results} active={!!targetSchoolId} />
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <NativeMarkerCluster
                 schools={results}
