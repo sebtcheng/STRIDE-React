@@ -1,45 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
 import { Search, MapPin } from "lucide-react";
 
-// Dynamically load the Leaflet map to prevent SSR issues
-const MapContainer = dynamic(
-    () => import("react-leaflet").then((mod) => mod.MapContainer),
-    { ssr: false, loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center animate-pulse">Loading Map Engine...</div> }
-);
-const TileLayer = dynamic(
-    () => import("react-leaflet").then((mod) => mod.TileLayer),
-    { ssr: false }
-);
-const Marker = dynamic(
-    () => import("react-leaflet").then((mod) => mod.Marker),
-    { ssr: false }
-);
-const Popup = dynamic(
-    () => import("react-leaflet").then((mod) => mod.Popup),
-    { ssr: false }
+// Dynamically load the Leaflet wrapper to prevent SSR issues and React 18 piecemeal DOM chunking bugs
+const DynamicMap = dynamic(
+    () => import('./SchoolLocatorMapInner'),
+    { ssr: false, loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center animate-pulse text-[#003366] font-bold">Loading Map Engine...</div> }
 );
 
 // Leaflet CSS needs to be imported or handled in layout, but let's mock the UI for now.
 
-const mockData = [
-    { id: 101123, name: "Aplaya National High School", region: "Region I", division: "Ilocos Norte", lat: 18.2, lng: 120.5, needsRes: 5 },
-    { id: 102456, name: "Baguio City Special Education Center", region: "CAR", division: "Baguio City", lat: 16.4, lng: 120.6, needsRes: 12 },
-    { id: 104789, name: "Cebu City Don Carlos A. Gothong MNHS", region: "Region VII", division: "Cebu City", lat: 10.3, lng: 123.9, needsRes: 25 },
-    { id: 105112, name: "Davao City National High School", region: "Region XI", division: "Davao City", lat: 7.1, lng: 125.6, needsRes: 0 },
-];
-
 export default function SchoolLocatorTab({ filters }) {
     const [selectedSchool, setSelectedSchool] = useState(null);
+    const [schools, setSchools] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const filteredItems = mockData.filter(
-        (item) => item.name && item.name.toLowerCase().includes((filters.q || '').toLowerCase())
-    );
+    useEffect(() => {
+        async function fetchSchools() {
+            setLoading(true);
+            setError(null);
+            try {
+                const params = new URLSearchParams();
+                if (filters.q) params.append('q', filters.q);
+                if (filters.region && filters.region !== 'All Regions') params.append('region', filters.region);
+                if (filters.division) params.append('division', filters.division);
+                if (filters.municipality) params.append('municipality', filters.municipality);
+                if (filters.legislative_district) params.append('legislative_district', filters.legislative_district);
 
-    const columns = [
+                const response = await fetch(`/api/school-locator?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    setSchools(data.data);
+                } else {
+                    setError(data.message || 'Error fetching school location data');
+                }
+            } catch (err) {
+                console.error("Failed to fetch schools:", err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchSchools();
+    }, [filters]);
+
+    // Memoize the datatable columns to prevent deep comparison re-renders when data updates
+    const columns = useMemo(() => [
         { name: "School ID", selector: (row) => row.id, sortable: true, width: "120px" },
         { name: "School Name", selector: (row) => row.name, sortable: true, grow: 2 },
         { name: "Region", selector: (row) => row.region, sortable: true },
@@ -53,7 +65,10 @@ export default function SchoolLocatorTab({ filters }) {
                 </span>
             )
         },
-    ];
+    ], []);
+
+    // Defer the expensive 47k DOM marker map generation so the UI and Table remain instantly responsive
+    const deferredSchools = useDeferredValue(schools);
 
     const handleRowClick = (row) => {
         setSelectedSchool(row);
@@ -66,11 +81,14 @@ export default function SchoolLocatorTab({ filters }) {
 
                 {/* Left Data Table Pane */}
                 <div className="w-full lg:w-1/2 p-4 border-r border-gray-200 flex flex-col h-full">
-                    <div className="flex-1 overflow-hidden border border-gray-200 rounded-lg shadow-sm">
+                    <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg shadow-sm">
                         <DataTable
                             columns={columns}
-                            data={filteredItems}
+                            data={schools}
+                            progressPending={loading}
+                            progressComponent={<div className="p-4 text-[#003366] font-bold animate-pulse">Fetching Schools...</div>}
                             pagination
+                            fixedHeader
                             paginationPerPage={10}
                             highlightOnHover
                             pointerOnHover
@@ -84,29 +102,13 @@ export default function SchoolLocatorTab({ filters }) {
                 </div>
 
                 {/* Right Map Pane */}
-                <div className="w-full lg:w-1/2 bg-gray-100 relative h-full">
-                    <MapContainer
-                        center={selectedSchool ? [selectedSchool.lat, selectedSchool.lng] : [12.8797, 121.7740]}
-                        zoom={selectedSchool ? 13 : 6}
-                        scrollWheelZoom={true}
-                        className="h-full w-full z-0 relative"
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        {mockData.map((school) => (
-                            <Marker key={school.id} position={[school.lat, school.lng]}>
-                                <Popup>
-                                    <div className="font-sans">
-                                        <strong>{school.name}</strong><br />
-                                        ID: {school.id}<br />
-                                        Region: {school.region}
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        ))}
-                    </MapContainer>
+                <div className={`w-full lg:w-1/2 bg-gray-100 relative h-full transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {error && (
+                        <div className="absolute top-4 left-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                            <strong>Error loading map data:</strong> {error}
+                        </div>
+                    )}
+                    <DynamicMap selectedSchool={selectedSchool} activeSchools={deferredSchools} />
                 </div>
             </div>
 

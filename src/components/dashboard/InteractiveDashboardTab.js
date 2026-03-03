@@ -15,6 +15,10 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
     const [apiError, setApiError] = useState(null);
     const [maximizedBlock, setMaximizedBlock] = useState(null);
     const [divisionGrouping, setDivisionGrouping] = useState('municipality');
+    const [isAnimated, setIsAnimated] = useState(false);
+    const [isModalAnimated, setIsModalAnimated] = useState(false);
+    const [isLabelsVisible, setIsLabelsVisible] = useState(false);
+    const [isModalLabelsVisible, setIsModalLabelsVisible] = useState(false);
 
     useEffect(() => {
         const selectedMetricsStr = (filters.selected_metrics && filters.selected_metrics.length > 0) ? filters.selected_metrics.join(',') : '';
@@ -42,6 +46,10 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
             .then(res => {
                 if (res.status === "success") {
                     setDashboardBlocks(res.data.blocks || []);
+                    setIsAnimated(false);
+                    setIsLabelsVisible(false);
+                    setTimeout(() => setIsAnimated(true), 100);
+                    setTimeout(() => setIsLabelsVisible(true), 800);
                 } else {
                     console.error("API Soft Error:", res.message);
                     setDashboardBlocks([]);
@@ -74,42 +82,16 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
         }
     }, [dashboardBlocks, maximizedBlock, loading]);
 
-    const handleBarClick = (event, blockType) => {
-        console.log(">>> Plotly Click Event Triggered <<<");
-        console.log("Raw Event Data:", event);
-        console.log("Block Type:", blockType);
-
-        if (!event || !event.points || event.points.length === 0) {
-            console.warn("Click did not register any data points. Make sure you click exactly inside the colored bar.");
-            return;
+    // Animate Modal immediately after open or upon refreshing its block dependency
+    useEffect(() => {
+        if (maximizedBlock) {
+            setIsModalAnimated(false);
+            setIsModalLabelsVisible(false);
+            const timer1 = setTimeout(() => setIsModalAnimated(true), 100);
+            const timer2 = setTimeout(() => setIsModalLabelsVisible(true), 800);
+            return () => { clearTimeout(timer1); clearTimeout(timer2); };
         }
-
-        const point = event.points[0];
-        console.log("Extracted Point Data:", point);
-
-        const clickedName = String(point.label || point.y || point.text || '').trim();
-        console.log("Resolved Clicked Name:", clickedName);
-
-        const currentFilters = filtersRef.current;
-        console.log("Current Drill Level:", currentFilters.drillLevel);
-
-        if (blockType === 'numeric') {
-            if (currentFilters.drillLevel === 'National') {
-                console.log(`Instructing Drilldown to Region: ${clickedName}`);
-                drillDown('Region', clickedName);
-            } else if (currentFilters.drillLevel === 'Region') {
-                console.log(`Instructing Drilldown to Division: ${clickedName}`);
-                drillDown('Division', clickedName);
-            } else if (currentFilters.drillLevel === 'Division') {
-                console.log(`Instructing Drilldown to DistrictGroup: ${clickedName}, target: ${divisionGrouping}`);
-                drillDown('DistrictGroup', clickedName, divisionGrouping);
-            } else {
-                console.log("No further drilldown from this level.");
-            }
-        } else {
-            console.log("Categorical Filtering Triggered: Subset global dashboard by -> ", clickedName);
-        }
-    };
+    }, [maximizedBlock]);
 
     const layoutStyling = {
         font: { family: 'Inter, sans-serif', color: '#475569', size: 10 },
@@ -197,7 +179,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                         )}
 
                         {!loading && !apiError && dashboardBlocks.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1400px] mx-auto">
+                            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1400px] mx-auto`}>
                                 {dashboardBlocks.map((block) => (
                                     <div key={block.id} className="w-full border border-gray-200 shadow-md rounded-xl overflow-hidden bg-white flex flex-col hover:shadow-lg transition-shadow">
                                         <div className="bg-[#003366] text-white font-bold py-2.5 px-3 flex justify-between items-center text-sm">
@@ -218,12 +200,40 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                             </div>
 
                                             <div
-                                                className="flex-1 min-h-[250px] relative z-10"
+                                                className="flex-1 min-h-[250px] relative z-10 overflow-y-auto pr-1"
                                                 style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                                                 onClickCapture={(e) => {
-                                                    console.log("DOM Click Captured. Checking Hovered Point Ref...", window._hoveredPoint);
-                                                    if (window._hoveredPoint) {
-                                                        const clickedName = window._hoveredPoint;
+                                                    if (loading) return;
+                                                    let clickedName = window._hoveredPoint;
+
+                                                    // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
+                                                    if (!clickedName) {
+                                                        try {
+                                                            const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
+                                                            if (plotContainer) {
+                                                                const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
+                                                                const sortedLabels = [...(block.data.labels || [])].sort((a, b) => b.length - a.length);
+
+                                                                for (let i = 0; i < hoverLayers.length; i++) {
+                                                                    const text = hoverLayers[i].textContent;
+                                                                    for (const label of sortedLabels) {
+                                                                        if (text.includes(label)) {
+                                                                            clickedName = label;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                    if (clickedName) break;
+                                                                }
+                                                            }
+                                                        } catch (err) {
+                                                            console.error("Error reading fallback tooltip:", err);
+                                                        }
+                                                    }
+
+                                                    console.log("Resolved Clicked Name:", clickedName);
+
+                                                    if (clickedName) {
+                                                        window._hoveredPoint = null; // Consume it immediately
                                                         const currentFilters = filtersRef.current;
                                                         if (block.type === 'numeric') {
                                                             if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
@@ -233,53 +243,56 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                     }
                                                 }}
                                             >
-                                                <Plot
-                                                    data={[{
-                                                        y: block.data.labels,
-                                                        x: block.data.values,
-                                                        type: 'bar',
-                                                        orientation: 'h',
-                                                        text: block.data.values.map(v => v.toLocaleString()),
-                                                        textposition: 'outside',
-                                                        insidetextanchor: 'end',
-                                                        cliponaxis: false,
-                                                        textfont: {
-                                                            family: 'Inter, sans-serif',
-                                                            size: 10,
-                                                            color: '#475569'
-                                                        },
-                                                        marker: {
-                                                            color: block.type === 'categorical' ? '#FFB81C' : '#0066CC',
-                                                            opacity: 0.9
-                                                        }
-                                                    }]}
-                                                    layout={{
-                                                        ...layoutStyling,
-                                                        margin: { t: 5, r: 60, b: 25, l: 15 },
-                                                        dragmode: false,
-                                                        hovermode: 'closest',
-                                                        xaxis: {
-                                                            visible: false,
-                                                            range: [0, Math.max(...block.data.values) * 1.25] // Give 25% extra space for huge numbers to safely sit on screen
-                                                        },
-                                                    }}
-                                                    config={{ displayModeBar: false, doubleClick: false, responsive: true }}
-                                                    useResizeHandler={true}
-                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                                    onClick={(event) => {
-                                                        console.log("Plotly fallback onClick fired!");
-                                                        handleBarClick(event, block.type);
-                                                    }}
-                                                    onHover={(event) => {
-                                                        if (event.points && event.points.length > 0) {
-                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
-                                                        }
-                                                    }}
-                                                    onUnhover={() => {
-                                                        // Delay clearing to prevent micro-twitch click misses on small bars
-                                                        setTimeout(() => { window._hoveredPoint = null; }, 500);
-                                                    }}
-                                                />
+                                                <div style={{ minHeight: `${Math.max(250, (block.data.values?.length || 0) * 35)}px`, height: '100%', position: 'relative', width: '100%' }}>
+                                                    <Plot
+                                                        data={[{
+                                                            y: block.data.labels,
+                                                            x: isAnimated ? block.data.values : block.data.values.map(() => 0),
+                                                            type: 'bar',
+                                                            orientation: 'h',
+                                                            text: isLabelsVisible ? block.data.values.map(v => v.toLocaleString()) : block.data.values.map(() => ''),
+                                                            textposition: 'outside',
+                                                            insidetextanchor: 'end',
+                                                            cliponaxis: false,
+                                                            textfont: {
+                                                                family: 'Inter, sans-serif',
+                                                                size: 10,
+                                                                color: '#475569'
+                                                            },
+                                                            marker: {
+                                                                color: block.type === 'categorical' ? '#FFB81C' : '#0066CC',
+                                                                opacity: 0.9
+                                                            }
+                                                        }]}
+                                                        layout={{
+                                                            ...layoutStyling,
+                                                            transition: { duration: 750, easing: 'cubic-in-out' },
+                                                            margin: { t: 5, r: 60, b: 25, l: 15 },
+                                                            dragmode: false,
+                                                            hovermode: 'closest',
+                                                            xaxis: {
+                                                                visible: false,
+                                                                range: [0, Math.max(...block.data.values) * 1.25] // Give 25% extra space for huge numbers to safely sit on screen
+                                                            },
+                                                        }}
+                                                        config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                                                        useResizeHandler={true}
+                                                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                                                        onHover={(event) => {
+                                                            console.log("[Normal View] Plotly onHover fired!", event.points);
+                                                            if (event.points && event.points.length > 0) {
+                                                                if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                                window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                                console.log("[Normal View] Set window._hoveredPoint to:", window._hoveredPoint);
+                                                            }
+                                                        }}
+                                                        onUnhover={() => {
+                                                            console.log("[Normal View] Plotly onUnhover fired!");
+                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                            window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="text-center mt-2 text-[10px] text-gray-400 font-medium italic">
                                                 {block.subtitle}
@@ -322,11 +335,38 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                         </div>
 
                                         <div
-                                            className="flex-1 relative z-10 w-full min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+                                            className="flex-1 relative z-10 w-full min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-y-auto pr-2"
                                             style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                                             onClickCapture={(e) => {
-                                                if (window._hoveredPoint) {
-                                                    const clickedName = window._hoveredPoint;
+                                                if (loading) return;
+                                                let clickedName = window._hoveredPoint;
+
+                                                // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
+                                                if (!clickedName) {
+                                                    try {
+                                                        const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
+                                                        if (plotContainer) {
+                                                            const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
+                                                            const sortedLabels = [...(maximizedBlock.data.labels || [])].sort((a, b) => b.length - a.length);
+
+                                                            for (let i = 0; i < hoverLayers.length; i++) {
+                                                                const text = hoverLayers[i].textContent;
+                                                                for (const label of sortedLabels) {
+                                                                    if (text.includes(label)) {
+                                                                        clickedName = label;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (clickedName) break;
+                                                            }
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Error reading fallback tooltip:", err);
+                                                    }
+                                                }
+
+                                                if (clickedName) {
+                                                    window._hoveredPoint = null; // Consume it immediately
                                                     const currentFilters = filtersRef.current;
                                                     if (maximizedBlock.type === 'numeric') {
                                                         if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
@@ -336,52 +376,58 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                 }
                                             }}
                                         >
-                                            <Plot
-                                                data={[{
-                                                    y: maximizedBlock.data.labels,
-                                                    x: maximizedBlock.data.values,
-                                                    type: 'bar',
-                                                    orientation: 'h',
-                                                    text: maximizedBlock.data.values.map(v => v.toLocaleString()),
-                                                    textposition: 'outside',
-                                                    insidetextanchor: 'end',
-                                                    cliponaxis: false,
-                                                    textfont: {
-                                                        family: 'Inter, sans-serif',
-                                                        size: 13,
-                                                        color: '#475569'
-                                                    },
-                                                    marker: {
-                                                        color: maximizedBlock.type === 'categorical' ? '#FFB81C' : '#0066CC',
-                                                        opacity: 0.95
-                                                    }
-                                                }]}
-                                                layout={{
-                                                    ...layoutStyling,
-                                                    margin: { t: 20, r: 100, b: 40, l: 30 },
-                                                    dragmode: false,
-                                                    hovermode: 'closest',
-                                                    xaxis: {
-                                                        visible: false,
-                                                        range: [0, Math.max(...maximizedBlock.data.values) * 1.25]
-                                                    },
-                                                    yaxis: {
-                                                        ...layoutStyling.yaxis,
+                                            <div style={{ minHeight: `${Math.max(300, (maximizedBlock.data.values?.length || 0) * 45)}px`, height: '100%', position: 'relative', width: '100%' }}>
+                                                <Plot
+                                                    data={[{
+                                                        y: maximizedBlock.data.labels,
+                                                        x: isModalAnimated ? maximizedBlock.data.values : maximizedBlock.data.values.map(() => 0),
+                                                        type: 'bar',
+                                                        orientation: 'h',
+                                                        text: isModalLabelsVisible ? maximizedBlock.data.values.map(v => v.toLocaleString()) : maximizedBlock.data.values.map(() => ''),
+                                                        textposition: 'outside',
+                                                        insidetextanchor: 'end',
                                                         cliponaxis: false,
-                                                        tickfont: { size: 12, family: 'Inter, sans-serif' }
-                                                    }
-                                                }}
-                                                config={{ displayModeBar: false, doubleClick: false, responsive: true }}
-                                                useResizeHandler={true}
-                                                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                                onClick={(event) => handleBarClick(event, maximizedBlock.type)}
-                                                onHover={(event) => {
-                                                    if (event.points && event.points.length > 0) {
-                                                        window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
-                                                    }
-                                                }}
-                                                onUnhover={() => { setTimeout(() => { window._hoveredPoint = null; }, 500); }}
-                                            />
+                                                        textfont: {
+                                                            family: 'Inter, sans-serif',
+                                                            size: 13,
+                                                            color: '#475569'
+                                                        },
+                                                        marker: {
+                                                            color: maximizedBlock.type === 'categorical' ? '#FFB81C' : '#0066CC',
+                                                            opacity: 0.95
+                                                        }
+                                                    }]}
+                                                    layout={{
+                                                        ...layoutStyling,
+                                                        transition: { duration: 750, easing: 'cubic-in-out' },
+                                                        margin: { t: 20, r: 100, b: 40, l: 30 },
+                                                        dragmode: false,
+                                                        hovermode: 'closest',
+                                                        xaxis: {
+                                                            visible: false,
+                                                            range: [0, Math.max(...maximizedBlock.data.values) * 1.25]
+                                                        },
+                                                        yaxis: {
+                                                            ...layoutStyling.yaxis,
+                                                            cliponaxis: false,
+                                                            tickfont: { size: 12, family: 'Inter, sans-serif' }
+                                                        }
+                                                    }}
+                                                    config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                                                    useResizeHandler={true}
+                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                                                    onHover={(event) => {
+                                                        if (event.points && event.points.length > 0) {
+                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                        }
+                                                    }}
+                                                    onUnhover={() => {
+                                                        if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                        window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

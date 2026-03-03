@@ -64,10 +64,6 @@ export default function QuickSearchTab({ filters }) {
             const data = await res.json();
             if (data.status === "success") {
                 setFullProfile(data.data);
-                // Auto-scroll to details
-                setTimeout(() => {
-                    detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
             }
         } catch (e) {
             console.error("Profile fetch failed:", e);
@@ -123,7 +119,7 @@ export default function QuickSearchTab({ filters }) {
                             <Search size={16} /> Search Results ({totalMatches})
                         </h3>
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto">
                         <DataTable
                             columns={columns}
                             data={searchResults}
@@ -131,6 +127,7 @@ export default function QuickSearchTab({ filters }) {
                             highlightOnHover
                             pointerOnHover
                             pagination
+                            fixedHeader
                             progressPending={loadingSearch}
                             noDataComponent={<div className="p-20 text-gray-400 font-medium">Use Sidebar to filter and Search</div>}
                             customStyles={{

@@ -46,7 +46,6 @@ export async function GET(request) {
             )`;
         }
 
-        sql += ` LIMIT 1000`;
 
         const result = await pool.query(sql, params);
 

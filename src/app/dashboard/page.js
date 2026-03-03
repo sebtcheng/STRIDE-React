@@ -26,8 +26,8 @@ export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState("interactive");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // 1. Global Drill State (Hierarchical State Engine)
-    const [filters, setFilters] = useState({
+    // 1. Core Default Filter State
+    const defaultFilters = {
         drillLevel: 'National', // National -> Region -> Division -> SDO/District
         region: 'All Regions',
         division: '',
@@ -49,51 +49,83 @@ export default function DashboardPage() {
         },
         global_trigger: 0,
         history: [] // State stack for the 'Undo/Back' logic
-    });
+    };
+
+    // 2. Tab-Scoped Filter Engine
+    const [tabFilters, setTabFilters] = useState({});
+
+    // Dynamically fetch the current tab's filters, or fallback to defaults if unvisited
+    const filters = tabFilters[activeTab] || defaultFilters;
 
     const updateFilters = (newFilters) => {
-        setFilters(prev => ({
-            ...prev,
-            ...newFilters,
-            global_trigger: prev.global_trigger + 1
-        }));
+        setTabFilters(prev => {
+            const currentTabState = prev[activeTab] || defaultFilters;
+            return {
+                ...prev,
+                [activeTab]: {
+                    ...currentTabState,
+                    ...newFilters,
+                    global_trigger: currentTabState.global_trigger + 1
+                }
+            };
+        });
     };
 
     const applyDrillDown = (level, name, groupingTarget) => {
-        setFilters(prev => {
-            if (prev.drillLevel === level) return prev; // Prevent double-firing from corrupting history stack
-            const nextHistory = [...prev.history, {
-                drillLevel: prev.drillLevel,
-                region: prev.region,
-                division: prev.division,
-                municipality: prev.municipality,
-                legislative_district: prev.legislative_district,
-                categoricalFilters: prev.categoricalFilters
+        setTabFilters(prevTab => {
+            const currentTabState = prevTab[activeTab] || defaultFilters;
+
+            if (currentTabState.drillLevel === level) return prevTab; // Prevent double-firing
+
+            const nextHistory = [...currentTabState.history, {
+                drillLevel: currentTabState.drillLevel,
+                region: currentTabState.region,
+                division: currentTabState.division,
+                municipality: currentTabState.municipality,
+                legislative_district: currentTabState.legislative_district,
+                categoricalFilters: currentTabState.categoricalFilters
             }];
 
-            const newState = { ...prev, drillLevel: level, history: nextHistory, global_trigger: prev.global_trigger + 1 };
-            if (level === 'Region') newState.region = name;
-            else if (level === 'Division') newState.division = name;
-            else if (level === 'DistrictGroup') {
+            const newState = { ...currentTabState, drillLevel: level, history: nextHistory, global_trigger: currentTabState.global_trigger + 1 };
+
+            if (level === 'Region') {
+                newState.region = name;
+                newState.division = '';
+                newState.municipality = '';
+                newState.legislative_district = '';
+            } else if (level === 'Division') {
+                newState.division = name;
+                newState.municipality = '';
+                newState.legislative_district = '';
+            } else if (level === 'DistrictGroup') {
                 if (groupingTarget === 'municipality') newState.municipality = name;
                 if (groupingTarget === 'legislative_district') newState.legislative_district = name;
             }
 
-            return newState;
+            return {
+                ...prevTab,
+                [activeTab]: newState
+            };
         });
     };
 
     const rollbackLevel = () => {
-        setFilters(prev => {
-            if (prev.history.length === 0) return prev;
-            const lastState = prev.history[prev.history.length - 1];
-            const nextHistory = prev.history.slice(0, -1);
+        setTabFilters(prevTab => {
+            const currentTabState = prevTab[activeTab] || defaultFilters;
+
+            if (currentTabState.history.length === 0) return prevTab;
+
+            const lastState = currentTabState.history[currentTabState.history.length - 1];
+            const nextHistory = currentTabState.history.slice(0, -1);
 
             return {
-                ...prev,
-                ...lastState,
-                history: nextHistory,
-                global_trigger: prev.global_trigger + 1
+                ...prevTab,
+                [activeTab]: {
+                    ...currentTabState,
+                    ...lastState,
+                    history: nextHistory,
+                    global_trigger: currentTabState.global_trigger + 1
+                }
             };
         });
     };

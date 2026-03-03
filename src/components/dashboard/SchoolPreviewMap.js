@@ -1,22 +1,99 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import "leaflet.markercluster";
+import { renderToStaticMarkup } from "react-dom/server";
+import { School } from "lucide-react";
 
 function ChangeView({ center, zoom }) {
     const map = useMap();
     useEffect(() => {
         if (center && center[0] && center[1]) {
-            map.setView(center, zoom);
+            map.flyTo(center, zoom, { duration: 1.5 });
         }
     }, [center, zoom, map]);
     return null;
 }
 
+function NativeMarkerCluster({ schools, iconCreateFunction, targetSchoolId, onMarkerClick }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || !schools) return;
+
+        const clusterGroup = L.markerClusterGroup({
+            chunkedLoading: true,
+            maxClusterRadius: 50,
+            iconCreateFunction: iconCreateFunction
+        });
+
+        const validSchools = schools.filter(s => s.lat != null && s.lng != null && !isNaN(s.lat) && !isNaN(s.lng));
+
+        const markers = validSchools.map(school => {
+            const isActive = school.id === targetSchoolId;
+            const marker = L.marker([Number(school.lat), Number(school.lng)], {
+                icon: isActive ? customSchoolIconActive : customSchoolIconInactive
+            });
+
+            if (onMarkerClick) {
+                marker.on('click', () => onMarkerClick(school));
+            } else {
+                marker.bindPopup(`
+                    <div class="font-sans text-sm">
+                        <strong class="text-[#003366] text-base">${school.name}</strong><br />
+                        ID: ${school.id}<br />
+                    </div>
+                `);
+            }
+            return marker;
+        });
+
+        clusterGroup.addLayers(markers);
+        map.addLayer(clusterGroup);
+
+        return () => {
+            map.removeLayer(clusterGroup);
+        };
+    }, [map, schools, iconCreateFunction, targetSchoolId, onMarkerClick]);
+
+    return null;
+}
+
+const schoolIconSvgActive = renderToStaticMarkup(<School color="white" size={16} />);
+const customSchoolIconActive = L.divIcon({
+    html: `<div class="bg-[#003366] text-white rounded-full w-8 h-8 flex items-center justify-center border-2 border-[#FFB81C] shadow-lg focus:outline-none">${schoolIconSvgActive}</div>`,
+    className: 'bg-transparent',
+    iconSize: L.point(32, 32, true),
+    iconAnchor: [16, 16],
+});
+
+const schoolIconSvgInactive = renderToStaticMarkup(<School color="white" size={12} />);
+const customSchoolIconInactive = L.divIcon({
+    html: `<div class="bg-[#003366] opacity-70 text-white rounded-full w-6 h-6 flex items-center justify-center border border-white shadow-sm focus:outline-none">${schoolIconSvgInactive}</div>`,
+    className: 'bg-transparent',
+    iconSize: L.point(24, 24, true),
+    iconAnchor: [12, 12],
+});
+
 export default function SchoolPreviewMap({ lat, lng, name, results = [], onMarkerClick, zoom = 15 }) {
     const defaultCenter = [12.8797, 121.7740];
-    const center = lat && lng ? [lat, lng] : defaultCenter;
+
+    // Ensure numeric parsing to prevent "Cannot set properties of undefined (setting '_leaflet_pos')" from string inputs
+    const center = lat != null && lng != null && !isNaN(lat) && !isNaN(lng) ? [Number(lat), Number(lng)] : defaultCenter;
+    const targetSchoolId = results.find(r => r.lat === lat && r.lng === lng)?.id;
+
+    const clusterIconFunction = useMemo(() => {
+        return (cluster) => {
+            return L.divIcon({
+                html: `<div class="bg-white text-[#003366] font-bold rounded-full w-9 h-9 flex items-center justify-center border-2 border-[#003366]/50 shadow-sm text-xs opacity-90">${cluster.getChildCount()}</div>`,
+                className: 'bg-transparent',
+                iconSize: L.point(36, 36, true),
+            });
+        };
+    }, []);
 
     return (
         <MapContainer
@@ -28,30 +105,12 @@ export default function SchoolPreviewMap({ lat, lng, name, results = [], onMarke
         >
             <ChangeView center={center} zoom={zoom} />
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-            {results.map((school, index) => {
-                const isActive = school.id === results.find(r => r.lat === lat && r.lng === lng)?.id;
-                return (
-                    <CircleMarker
-                        key={`${school.id}-${index}`}
-                        center={[school.lat, school.lng]}
-                        radius={isActive ? 12 : 6}
-                        eventHandlers={{
-                            click: () => onMarkerClick && onMarkerClick(school),
-                        }}
-                        pathOptions={{
-                            color: isActive ? '#003366' : '#CE1126',
-                            fillColor: isActive ? '#FFB81C' : '#CE1126',
-                            fillOpacity: 0.7,
-                            weight: isActive ? 3 : 1
-                        }}
-                    >
-                        <Popup>
-                            <div className="text-xs font-bold text-[#003366]">{school.name}</div>
-                        </Popup>
-                    </CircleMarker>
-                );
-            })}
+            <NativeMarkerCluster
+                schools={results}
+                iconCreateFunction={clusterIconFunction}
+                targetSchoolId={targetSchoolId}
+                onMarkerClick={onMarkerClick}
+            />
         </MapContainer>
     );
 }
