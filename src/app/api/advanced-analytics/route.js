@@ -55,11 +55,37 @@ export async function POST(request) {
             pool.query(countSql, params)
         ]);
 
+        // Dynamically determine grouping column based on the active geography filters
+        let groupCol = 'region';
+        if (municipality) {
+            groupCol = 'school_type';
+        } else if (division) {
+            groupCol = 'municipality';
+        } else if (region && region !== 'All Regions') {
+            groupCol = 'division';
+        }
+
+        const graphSql = `
+            SELECT ${groupCol} as label, COUNT(*) as value
+            FROM dim_schools
+            ${filterSql}
+            GROUP BY ${groupCol}
+            ORDER BY value DESC
+        `;
+        const graphRes = await pool.query(graphSql, params);
+
+        const graphData = {
+            title: `Matching Schools by ${groupCol.charAt(0).toUpperCase() + groupCol.slice(1)}`,
+            labels: graphRes.rows.map(r => r.label),
+            values: graphRes.rows.map(r => Number(r.value))
+        };
+
         return NextResponse.json({
             status: "success",
             data: {
                 rows: dataRes.rows,
-                totalMatched: parseInt(countRes.rows[0].exact_count, 10)
+                totalMatched: parseInt(countRes.rows[0].exact_count, 10),
+                graphData: graphData
             }
         });
 

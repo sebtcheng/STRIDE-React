@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from "react-leaflet";
+const { BaseLayer } = LayersControl;
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet.markercluster";
@@ -91,10 +92,20 @@ export default function SchoolLocatorMapInner({ selectedSchool, activeSchools })
             className="h-full w-full z-0 relative"
         >
             <ChangeView center={center} zoom={zoom} />
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <LayersControl position="topright">
+                <BaseLayer name="Road View">
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                </BaseLayer>
+                <BaseLayer checked name="Satellite View">
+                    <TileLayer
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                        attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+                    />
+                </BaseLayer>
+            </LayersControl>
             <NativeMarkerCluster schools={activeSchools} iconCreateFunction={clusterIconFunction} />
         </MapContainer>
     );

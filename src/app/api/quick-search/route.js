@@ -14,21 +14,21 @@ export async function GET(request) {
         let sql = `
             SELECT 
                 s.schoolid as id, 
-                s.schoolname as name, 
+                s.school_name as name, 
                 s.region, 
                 s.division, 
                 s.municipality, 
                 s.latitude as lat, 
                 s.longitude as lng, 
-                s.totalenrolment as enrolment,
+                CAST(COALESCE(s.totalenrolment, '0') AS NUMERIC) as enrolment,
                 COALESCE(p.project_count, 0) as infra_projects,
                 COALESCE(p.total_allocation, 0) as total_infra_value
-            FROM dim_schools s
+            FROM raw_school_unique_v2 s
             LEFT JOIN (
                 SELECT schoolid, COUNT(*) as project_count, SUM(CAST(allocation AS NUMERIC)) as total_allocation
                 FROM fact_efd_masterlist
                 GROUP BY schoolid
-            ) p ON s.schoolid = p.schoolid
+            ) p ON s.schoolid::text = p.schoolid::text
             WHERE 1=1
         `;
         const params = [];
@@ -44,7 +44,7 @@ export async function GET(request) {
         }
         if (district) {
             params.push(district);
-            sql += ` AND s.legislative_district = $${params.length}`;
+            sql += ` AND s.district = $${params.length}`;
         }
         if (municipality) {
             params.push(municipality);
@@ -54,10 +54,12 @@ export async function GET(request) {
         if (query) {
             params.push(`%${query}%`);
             sql += ` AND (
-                s.schoolname ILIKE $${params.length} OR 
+                s.school_name ILIKE $${params.length} OR 
                 CAST(s.schoolid AS TEXT) ILIKE $${params.length}
             )`;
         }
+
+        sql += ` ORDER BY s.region ASC`;
 
         const result = await pool.query(sql, params);
 

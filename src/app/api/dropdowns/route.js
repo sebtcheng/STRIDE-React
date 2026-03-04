@@ -25,10 +25,25 @@ export async function GET(request) {
         if (division) { munQuery += ` AND division = $${munParams.length + 1}`; munParams.push(division); }
         munQuery += ' ORDER BY municipality';
 
+        // Fetch legislative districts from raw_school_unique_v2
+        let legDistQuery = 'SELECT DISTINCT legislative_district FROM raw_school_unique_v2 WHERE legislative_district IS NOT NULL';
+        const legDistParams = [];
+        if (region) {
+            // we use ILIKE or standard matching, wait. 'raw_school_unique_v2' has old_region / region confusion.
+            legDistQuery += " AND (region = $1 OR old_region = $1 OR region ILIKE '%' || $1 || '%')";
+            legDistParams.push(region);
+        }
+        if (division) {
+            legDistQuery += ` AND division = $${legDistParams.length + 1}`;
+            legDistParams.push(division);
+        }
+        legDistQuery += ' ORDER BY legislative_district';
+
         const regionsRes = await pool.query('SELECT DISTINCT region FROM dim_schools WHERE region IS NOT NULL ORDER BY region');
         const divisionsRes = await pool.query(divQuery, divParams);
         const districtsRes = await pool.query(distQuery, distParams);
         const municipalitiesRes = await pool.query(munQuery, munParams);
+        const legDistrictsRes = await pool.query(legDistQuery, legDistParams);
 
         // Fetch unique positions from gmis_filling
         const positionsRes = await pool.query('SELECT DISTINCT "position" FROM gmis_filling WHERE "position" IS NOT NULL ORDER BY "position"');
@@ -40,6 +55,7 @@ export async function GET(request) {
         const divisions = divisionsRes.rows.map(r => r.division);
         const districts = districtsRes.rows.map(r => r.district);
         const municipalities = municipalitiesRes.rows.map(r => r.municipality);
+        const legDistricts = legDistrictsRes.rows.map(r => r.legislative_district);
         const positionsList = positionsRes.rows.map(r => r.position);
         const efdCategories = efdRes.rows.map(r => r.category);
 
@@ -50,6 +66,7 @@ export async function GET(request) {
                 uniDivisions: divisions,
                 uniDistricts: districts,
                 uniMunicipalities: municipalities,
+                uniLegislativeDistricts: legDistricts,
                 efdCategories: efdCategories.length ? efdCategories : ["Classrooms", "Wash WINS", "Electrification"],
                 gmisPositions: positionsList,
                 analyticsMap: [] // Placeholder for column map if needed

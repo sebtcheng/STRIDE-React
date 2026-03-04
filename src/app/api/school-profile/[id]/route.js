@@ -5,8 +5,8 @@ export async function GET(request, { params }) {
     const { id } = await params;
 
     try {
-        // Fetch everything from dim_schools for this school
-        const schoolRes = await pool.query('SELECT s.* FROM dim_schools s WHERE s.schoolid = $1', [id]);
+        // Fetch everything from raw_school_unique_v2 for this school
+        const schoolRes = await pool.query('SELECT s.* FROM raw_school_unique_v2 s WHERE s.schoolid::text = $1', [id]);
 
         if (schoolRes.rowCount === 0) {
             return NextResponse.json({ status: "error", message: "School not found" }, { status: 404 });

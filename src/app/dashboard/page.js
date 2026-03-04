@@ -192,11 +192,11 @@ export default function DashboardPage() {
                     <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white">
                         {activeTab === "interactive" && <InteractiveDashboardTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
                         {activeTab === "locator" && <SchoolLocatorTab filters={filters} />}
-                        {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} />}
+                        {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
                         {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
                         {activeTab === "infra" && <InfrastructureTab filters={filters} />}
                         {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
-                        {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} />}
+                        {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} setFilters={updateFilters} />}
                         {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
                         {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
                         {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}

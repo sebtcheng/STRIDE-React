@@ -217,9 +217,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
         }
     };
 
+    if (activeTab === "resource_mapping") return null;
+
     return (
         <aside className="w-64 lg:w-72 bg-white border-r border-gray-200 h-[calc(100vh-64px)] overflow-y-auto flex flex-col shrink-0">
-            {/* HIERARCHICAL NAVIGATION BAR */}
             <div className="p-4 bg-[#003366] text-white flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Operational Logic</span>
@@ -569,6 +570,21 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                         {quickSearchAdvanced && (
                             <div className="animate-in fade-in slide-in-from-top-2 space-y-1">
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-gray-600 mb-1 tracking-tight">Search School Name / ID</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#003366] transition-colors">
+                                            <Search size={14} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Keyword or ID..."
+                                            value={filters.q || ''}
+                                            onChange={(e) => setFilters({ q: e.target.value })}
+                                            className="w-full bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] block pl-9 p-2 outline-none transition-all placeholder:text-gray-400 font-medium"
+                                        />
+                                    </div>
+                                </div>
                                 <SelectDropdown label="Region" field="region" options={dbSchema.uniRegions} placeholder="All Regions" filters={filters} setFilters={setFilters} />
                                 <SelectDropdown label="Division" field="division" options={dbSchema.uniDivisions} filters={filters} setFilters={setFilters} />
                                 <SelectDropdown label="District" field="district" options={dbSchema.uniDistricts} filters={filters} setFilters={setFilters} />
@@ -655,7 +671,32 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                                 {filters.resource_mapping_type === "Infrastructure" && (
                                     <div className="space-y-3">
-                                        <SelectDropdown label="Infrastructure Project" field="infra_category" options={dbSchema.efdCategories} filters={filters} setFilters={setFilters} />
+                                        <MultiSelectDropdown
+                                            title="Facility Category"
+                                            groups={[{
+                                                group: "Select Facility Type",
+                                                options: (dbSchema.efdCategories || []).map(cat => ({ id: cat, label: cat }))
+                                            }]}
+                                            isOpen={openDropdown === "efd"}
+                                            onToggle={() => setOpenDropdown(openDropdown === "efd" ? null : "efd")}
+                                            filters={filters}
+                                            handleMetricToggle={handleEfdToggle}
+                                            selectedKey="efd_type"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setFilters({ efd_type: dbSchema.efdCategories })}
+                                                className="flex-1 text-[9px] font-bold py-1.5 bg-gray-100 hover:bg-gray-200 text-[#003366] rounded border border-gray-200 transition-colors uppercase"
+                                            >
+                                                Select All
+                                            </button>
+                                            <button
+                                                onClick={() => setFilters({ efd_type: [] })}
+                                                className="flex-1 text-[9px] font-bold py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded border border-gray-200 transition-colors uppercase"
+                                            >
+                                                Deselect All
+                                            </button>
+                                        </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             {["Completed", "Ongoing"].map(s => (
                                                 <button key={s} className="text-[9px] font-bold py-1.5 border border-gray-200 rounded hover:bg-white transition-colors">{s}</button>

@@ -16,9 +16,18 @@ node_modules
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# Diagnostic & Scratch Scripts
+check_*.js
+check_*.mjs
+db_check*.js
+db_check*.mjs
+query_db.js
+create_view.js
+list_tables.js
+api_out.txt
+test_api*.txt
+test_api*.json
+tmp_*.json
 
 # production
 /build
