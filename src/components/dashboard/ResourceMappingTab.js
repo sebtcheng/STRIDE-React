@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
 import { Map, Layers, MapPin, Database, AlertCircle, Maximize2, Minimize2, Search, Table, Info, BarChart2, ChevronUp, ChevronDown } from "lucide-react";
+import SchoolProfileModal from "./SchoolProfileModal";
 
 // Dynamically load the Map Wrapper
 const ResourceMapArea = dynamic(() => import("./ResourceMapArea"), { ssr: false });
@@ -19,6 +20,32 @@ export default function ResourceMappingTab({ filters, setFilters }) {
     // Local UI State for Layout Redesign
     const [activeCategory, setActiveCategory] = useState("Teaching Deployment");
     const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedModalSchool, setSelectedModalSchool] = useState(null);
+    const [fullProfile, setFullProfile] = useState(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
+
+    const handleMarkerClick = async (school) => {
+        setSelectedModalSchool({ ...school, id: school.id || school.school_id });
+        setIsModalOpen(true);
+        setLoadingProfile(true);
+        setFullProfile(null);
+        try {
+            const schoolId = school.id || school.school_id;
+            if (!schoolId) throw new Error("No school ID found");
+            const res = await fetch(`/api/school-profile/${schoolId}`);
+            const data = await res.json();
+            if (data.status === "success") {
+                setFullProfile(data.data);
+            }
+        } catch (e) {
+            console.error("Profile fetch failed:", e);
+        } finally {
+            setLoadingProfile(false);
+        }
+    };
 
     // Local Custom Sidebar Filter State
     const [localFilters, setLocalFilters] = useState({
@@ -85,6 +112,8 @@ export default function ResourceMappingTab({ filters, setFilters }) {
     }, [localFilters.region, localFilters.division]);
 
     useEffect(() => {
+        // Prevent initial load until clicked
+        if (!filters || !filters.mapping_trigger) return;
         fetchGISData();
     }, [filters.mapping_trigger, filters.active_layer, filters.resource_view_mode, filters.resource_mapping_type]);
 
@@ -116,6 +145,20 @@ export default function ResourceMappingTab({ filters, setFilters }) {
 
     const handleTabClick = (tab) => {
         setActiveCategory(tab);
+        if (setFilters) {
+            setSelectedSchool(null);
+            setMapFocus(null);
+
+            setFilters({
+                region: localFilters.region,
+                division: localFilters.division,
+                legislative_district: localFilters.legislative_district,
+                level: tab === 'Teaching Deployment' ? localFilters.level : null,
+                efd_type: tab === 'Facilities' ? localFilters.efd_type : null,
+                resource_mapping_type: tab,
+                mapping_trigger: (filters.mapping_trigger || 0) + 1
+            });
+        }
     };
 
     const memoizedColumns = useMemo(() => {
@@ -140,7 +183,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -155,7 +200,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -176,7 +223,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -196,7 +245,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -217,7 +268,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -235,7 +288,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -249,7 +304,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -282,7 +339,9 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 name: 'Action',
                 cell: row => (
                     <div className="flex gap-2">
-                        <MapPin size={12} className="text-blue-400" />
+                        <button onClick={() => handleMarkerClick(row)} className="p-1 hover:bg-blue-100 rounded-full transition-colors" title="View Profile">
+                            <Info size={14} className="text-blue-600" />
+                        </button>
                     </div>
                 ),
                 width: '60px'
@@ -371,11 +430,19 @@ export default function ResourceMappingTab({ filters, setFilters }) {
             activeCategory={activeCategory}
             selectedSchoolIndustries={selectedSchoolIndustries}
             selectedSchool={selectedSchool}
+            onMarkerClick={handleMarkerClick}
         />
     ), [mapData.points, mapFocus, activeCategory, selectedSchoolIndustries, selectedSchool]);
 
     return (
-        <div className="flex h-full bg-white overflow-hidden">
+        <div className="flex h-full bg-white overflow-hidden relative">
+            <SchoolProfileModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                school={selectedModalSchool}
+                fullProfile={fullProfile}
+                loadingProfile={loadingProfile}
+            />
             {/* Custom Left Sidebar (RESOURCE MAPPING FILTERS) */}
             <div className="w-[280px] bg-[#003366] shrink-0 flex flex-col h-full shadow-xl z-20">
                 <div className="p-6 text-center">

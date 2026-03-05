@@ -68,9 +68,44 @@ function FitBounds({ points, selectedSchool }) {
     return null;
 }
 
+// --- Haversine Distance Utility ---
+const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+// --- Calculate Industry Sector Counts Helper ---
+const calculateIndustryCounts = (school, industryPoints) => {
+    if (!school || !industryPoints || industryPoints.length === 0) return null;
+    const sLat = Number(school.lat);
+    const sLng = Number(school.lng);
+    if (isNaN(sLat) || isNaN(sLng)) return null;
+
+    const counts = {};
+    industryPoints.forEach(ind => {
+        const iLat = Number(ind.lat);
+        const iLng = Number(ind.lng);
+        if (isNaN(iLat) || isNaN(iLng)) return;
+
+        const dist = getDistance(sLat, sLng, iLat, iLng);
+        if (dist <= 5.0) { // 5km radius
+            const sector = ind.sector || 'Uncategorized';
+            counts[sector] = (counts[sector] || 0) + 1;
+        }
+    });
+
+    return Object.keys(counts).length > 0 ? counts : null;
+};
+
 // Helper to build popup HTML
-// Helper to build popup HTML
-const getPopupHtml = (pt, activeCategory, industries) => {
+const getPopupHtml = (pt, activeCategory, industries, isTooltip = false) => {
     const rowStyle = "display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background-color: #f9fafb; border-radius: 4px; border: 1px solid #f3f4f6; margin-bottom: 3px;";
     const labelStyle = "font-size: 8px; font-weight: bold; color: #6b7280; text-transform: uppercase;";
     const valueStyle = "font-size: 11px; font-weight: 800; color: #003366;";
@@ -183,17 +218,21 @@ const getPopupHtml = (pt, activeCategory, industries) => {
         <div style="padding: 4px; min-width: 220px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             <b style="color: #003366; font-size: 13px; display: block; margin-bottom: 2px; line-height: 1.2;">${pt.name}</b>
             <div style="font-size: 9px; color: #9ca3af; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-                ${pt.region || 'N/A'} | ${pt.division || 'N/A'} | ${pt.district || 'N/A'} | ID: ${pt.id}
+                ${pt.region || 'N/A'} | ${pt.division || 'N/A'} | ${pt.district || pt.municipality || 'N/A'} | ID: ${pt.id}
             </div>
             
             <div style="margin-top: 4px;">
                 ${tabContent}
             </div>
+            ${isTooltip ? `
+            <div style="margin-top: 8px; font-size: 10px; color: #3b82f6; font-weight: bold; border-top: 1px solid #eff6ff; padding-top: 6px; text-align: center; cursor: pointer;">
+                 <span style="background: #ebf5ff; padding: 4px 8px; border-radius: 4px; display: inline-block; width: 100%;">Click to view school data modal</span>
+            </div>` : ''}
         </div>
     `;
 };
 
-function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFunction, setSelectedSchool, setMapFocus, selectedSchool, activeCategory, selectedSchoolIndustries }) {
+function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFunction, setSelectedSchool, setMapFocus, selectedSchool, activeCategory, selectedSchoolIndustries, onMarkerClick }) {
     const map = useMap();
     const markersRef = useRef(new Map());
     const clusterGroupRef = useRef(null);
@@ -273,11 +312,25 @@ function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFu
                 .map(pt => {
                     const color = getMarkerColor(pt);
                     const marker = L.marker([Number(pt.lat), Number(pt.lng)], { icon: getSchoolIcon(color) });
-                    marker.bindPopup(getPopupHtml(pt, activeCategory), { minWidth: 220 });
+
+                    // Pre-calculate industries if in Industries tab for tooltip/popup consistency
+                    let indData = null;
+                    if (activeCategory === 'Industries (SHS)' && mapData.industryPoints) {
+                        indData = calculateIndustryCounts(pt, mapData.industryPoints);
+                    }
+
+                    marker.bindPopup(getPopupHtml(pt, activeCategory, indData), { minWidth: 220 });
+                    marker.bindTooltip(getPopupHtml(pt, activeCategory, indData, true), {
+                        direction: 'top',
+                        offset: [0, -10],
+                        opacity: 1,
+                        className: 'rounded-lg border-2 border-blue-100 shadow-xl bg-white'
+                    });
                     marker.on('click', (e) => {
                         L.DomEvent.stopPropagation(e);
                         setSelectedSchool(pt);
                         setMapFocus([Number(pt.lat), Number(pt.lng)]);
+                        if (onMarkerClick) onMarkerClick(pt);
                     });
                     markersRef.current.set(pt.id, marker);
                     return marker;
@@ -493,7 +546,7 @@ function MapLegend({ activeCategory }) {
     );
 }
 
-export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, setMapFocus, activeCategory, selectedSchoolIndustries, selectedSchool }) {
+export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, setMapFocus, activeCategory, selectedSchoolIndustries, selectedSchool, onMarkerClick }) {
     const clusterIconFunction = (cluster) => {
         return L.divIcon({
             html: `<div class="bg-white text-[#003366] font-bold rounded-full w-9 h-9 flex items-center justify-center border-2 border-[#003366] shadow-lg text-xs opacity-95">${cluster.getChildCount()}</div>`,
@@ -526,6 +579,7 @@ export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, 
                 selectedSchool={selectedSchool}
                 activeCategory={activeCategory}
                 selectedSchoolIndustries={selectedSchoolIndustries}
+                onMarkerClick={onMarkerClick}
             />
         </MapContainer>
     );

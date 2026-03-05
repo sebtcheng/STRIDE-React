@@ -84,7 +84,7 @@ function NativeMarkerCluster({ schools, iconCreateFunction, targetSchoolId, onMa
                     <div class="text-[#003366] font-bold text-xs border-b border-gray-100 pb-1 mb-1">${school.name}</div>
                     <div class="text-[10px] text-gray-600 leading-tight">
                         <div class="flex items-center gap-1 uppercase tracking-wider font-medium opacity-80">
-                            ${school.region || ''} | ${school.division || ''} | ${school.municipality || ''} | ${school.id}
+                            ${school.region || ''} | ${school.division || ''} | ${school.municipality || ''} | ID: ${school.id}
                         </div>
                         <div class="mt-2 text-blue-500 font-bold border-t border-blue-50 pt-1 flex items-center gap-1">
                              Click to view school data

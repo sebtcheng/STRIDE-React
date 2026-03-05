@@ -12,7 +12,7 @@ export async function GET(request) {
 
         // Build SQL Query against dim_schools joined with raw_school_unique_v2
         let sql = `
-            SELECT 
+            SELECT DISTINCT ON (s.schoolid)
                 s.schoolid as id, 
                 s.schoolname as name, 
                 s.region, 

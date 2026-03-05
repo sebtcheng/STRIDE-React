@@ -41,18 +41,19 @@ export async function POST(request) {
         }
 
         const dataSql = `
-            SELECT schoolid, schoolname as name, region, division, municipality, latitude as lat, longitude as lng, school_type
+            SELECT DISTINCT ON (schoolid) schoolid, schoolname as name, region, division, municipality, latitude as lat, longitude as lng, school_type
             FROM dim_schools
             ${filterSql}
-            LIMIT 5000
         `;
 
-        const countSql = `SELECT COUNT(*) as exact_count FROM dim_schools ${filterSql}`;
+        const countSql = `SELECT COUNT(*) as exact_count FROM (SELECT DISTINCT ON (schoolid) schoolid FROM dim_schools ${filterSql}) AS dist_count`;
+        const countTotalSql = `SELECT COUNT(*) as total_count FROM (SELECT DISTINCT ON (schoolid) schoolid FROM dim_schools) AS total_count`;
 
-        // Execute both in parallel
-        const [dataRes, countRes] = await Promise.all([
+        // Execute all three in parallel
+        const [dataRes, countRes, totalRes] = await Promise.all([
             pool.query(dataSql, params),
-            pool.query(countSql, params)
+            pool.query(countSql, params),
+            pool.query(countTotalSql)
         ]);
 
         // Dynamically determine grouping column based on the active geography filters
@@ -67,8 +68,7 @@ export async function POST(request) {
 
         const graphSql = `
             SELECT ${groupCol} as label, COUNT(*) as value
-            FROM dim_schools
-            ${filterSql}
+            FROM (SELECT DISTINCT ON (schoolid) * FROM dim_schools ${filterSql}) dist_schools
             GROUP BY ${groupCol}
             ORDER BY value DESC
         `;
@@ -85,6 +85,7 @@ export async function POST(request) {
             data: {
                 rows: dataRes.rows,
                 totalMatched: parseInt(countRes.rows[0].exact_count, 10),
+                totalEntries: parseInt(totalRes.rows[0].total_count, 10),
                 graphData: graphData
             }
         });

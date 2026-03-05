@@ -26,7 +26,7 @@ function ChangeView({ center, zoom }) {
     return null;
 }
 
-function NativeMarkerCluster({ schools, iconCreateFunction }) {
+function NativeMarkerCluster({ schools, iconCreateFunction, onMarkerClick }) {
     const map = useMap();
 
     useEffect(() => {
@@ -40,14 +40,32 @@ function NativeMarkerCluster({ schools, iconCreateFunction }) {
 
         const markers = schools.map(school => {
             const marker = L.marker([school.lat, school.lng], { icon: customSchoolIcon });
-            marker.bindPopup(`
-                <div class="font-sans text-sm">
-                    <strong class="text-[#003366] text-base">${school.name}</strong><br />
-                    ID: ${school.id}<br />
-                    Region: ${school.region}<br />
-                    Division: ${school.division}
+
+            marker.bindTooltip(`
+                <div class="p-2 min-w-[200px] font-sans">
+                    <div class="text-[#003366] font-bold text-xs border-b border-gray-100 pb-1 mb-1">${school.name}</div>
+                    <div class="text-[10px] text-gray-600 leading-tight">
+                        <div class="flex items-center gap-1 uppercase tracking-wider font-medium opacity-80">
+                            ${school.region || ''} | ${school.division || ''} | ${school.municipality || ''} | ID: ${school.id}
+                        </div>
+                        <div class="mt-2 text-blue-500 font-bold border-t border-blue-50 pt-1 flex items-center gap-1">
+                             Click to view school data
+                        </div>
+                    </div>
                 </div>
-            `);
+            `, {
+                direction: 'top',
+                offset: [0, -10],
+                opacity: 0.95,
+                className: 'rounded-lg border-2 border-blue-100 shadow-xl'
+            });
+
+            marker.on('click', () => {
+                if (onMarkerClick) {
+                    onMarkerClick(school);
+                }
+            });
+
             return marker;
         });
 
@@ -57,7 +75,7 @@ function NativeMarkerCluster({ schools, iconCreateFunction }) {
         return () => {
             map.removeLayer(clusterGroup);
         };
-    }, [map, schools, iconCreateFunction]);
+    }, [map, schools, iconCreateFunction, onMarkerClick]);
 
     return null;
 }
@@ -70,7 +88,7 @@ const customSchoolIcon = L.divIcon({
     iconAnchor: [16, 16],
 });
 
-export default function SchoolLocatorMapInner({ selectedSchool, activeSchools }) {
+export default function SchoolLocatorMapInner({ selectedSchool, activeSchools, onMarkerClick }) {
     const defaultCenter = [12.8797, 121.7740];
     const center = selectedSchool ? [selectedSchool.lat, selectedSchool.lng] : defaultCenter;
     const zoom = selectedSchool ? 13 : 6;
@@ -106,7 +124,7 @@ export default function SchoolLocatorMapInner({ selectedSchool, activeSchools })
                     />
                 </BaseLayer>
             </LayersControl>
-            <NativeMarkerCluster schools={activeSchools} iconCreateFunction={clusterIconFunction} />
+            <NativeMarkerCluster schools={activeSchools} iconCreateFunction={clusterIconFunction} onMarkerClick={onMarkerClick} />
         </MapContainer>
     );
 }

@@ -22,46 +22,56 @@ import HelpDrawer from "@/components/layout/HelpDrawer";
 // Import Leaflet styles globally for this route
 import "leaflet/dist/leaflet.css";
 
+// 1. Core Default Filter State (defined outside to prevent reference instability)
+const initialFilters = {
+    drillLevel: 'National', // National -> Region -> Division -> SDO/District
+    region: 'All Regions',
+    division: '',
+    district: '',
+    municipality: '',
+    focus: 'School Focus',
+    q: '',
+    categoricalFilters: {},
+    selected_metrics: [],
+    selected_positions: [],
+    plantilla_preset: null,
+    resource_view_mode: 'Standard',
+    resource_mapping_type: 'Teaching Deployment',
+    data_explorer_domains: {
+        'School Info': true,
+        'Teaching Data': false,
+        'Non-Teaching': false,
+        'Enrolment': false,
+        'Specialization': false,
+        'Infrastructure': false
+    },
+    data_explorer_selections: {
+        'School Info': [],
+        'Teaching Data': [],
+        'Non-Teaching': [],
+        'Enrolment': [],
+        'Specialization': [],
+        'Infrastructure': []
+    },
+    explorer_regions: [],
+    explorer_divisions: [],
+    global_trigger: 0,
+    history: []
+};
+
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState("interactive");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // 1. Core Default Filter State
-    const defaultFilters = {
-        drillLevel: 'National', // National -> Region -> Division -> SDO/District
-        region: 'All Regions',
-        division: '',
-        district: '',
-        municipality: '',
-        focus: 'School Focus',
-        q: '',
-        categoricalFilters: {}, // e.g. { ownership: 'Private' }
-        selected_metrics: [], // Array to hold dynamically selected columns
-        selected_positions: [], // Array to hold dynamically selected positions
-        plantilla_preset: null, // Hold the plantilla focus state
-        resource_view_mode: 'Standard',
-        resource_mapping_type: 'Teaching Deployment',
-        data_explorer_domains: {
-            'School Info': true,
-            'Teaching Data': false,
-            'Non-Teaching': false,
-            'Enrolment': false,
-            'Specialization': false,
-            'Infrastructure': false
-        },
-        global_trigger: 0,
-        history: [] // State stack for the 'Undo/Back' logic
-    };
-
     // 2. Tab-Scoped Filter Engine
     const [tabFilters, setTabFilters] = useState({});
 
-    // Dynamically fetch the current tab's filters, or fallback to defaults if unvisited
-    const filters = tabFilters[activeTab] || defaultFilters;
+    // Dynamically fetch the current tab's filters, or fallback to defaults
+    const filters = tabFilters[activeTab] || initialFilters;
 
     const updateFilters = (newFilters) => {
         setTabFilters(prev => {
-            const currentTabState = prev[activeTab] || defaultFilters;
+            const currentTabState = prev[activeTab] || initialFilters;
             return {
                 ...prev,
                 [activeTab]: {
@@ -75,7 +85,7 @@ export default function DashboardPage() {
 
     const applyDrillDown = (level, name, groupingTarget) => {
         setTabFilters(prevTab => {
-            const currentTabState = prevTab[activeTab] || defaultFilters;
+            const currentTabState = prevTab[activeTab] || initialFilters;
 
             if (currentTabState.drillLevel === level) return prevTab; // Prevent double-firing
 
@@ -113,7 +123,7 @@ export default function DashboardPage() {
 
     const rollbackLevel = () => {
         setTabFilters(prevTab => {
-            const currentTabState = prevTab[activeTab] || defaultFilters;
+            const currentTabState = prevTab[activeTab] || initialFilters;
 
             if (currentTabState.history.length === 0) return prevTab;
 

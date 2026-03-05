@@ -49,7 +49,7 @@ export async function GET(request) {
 
         if (type === 'Teaching Deployment') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (schoolid)
                     schoolid as id, schoolname as name, municipality as mun, latitude as lat, longitude as lng,
                     region, division, district,
                     teachershortage as shortage, teacherexcess as excess, totalenrolment as enrollment
@@ -91,7 +91,7 @@ export async function GET(request) {
 
         } else if (type === 'Non-teaching Deployment' || type === 'Non-teaching Deployment (AO II)') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (schoolid)
                     schoolid as id, school_name as name, municipality as mun, latitude as lat, longitude as lng,
                     region, division, district,
                     clustering_status as metric_label, pdoi_deployment, 1 as metric_val
@@ -126,7 +126,7 @@ export async function GET(request) {
             }
         } else if (type === 'Classrooms') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (l.school_id)
                     l.school_id as id, l.school_name as name, l.municipality as mun, 
                     b.latitude as lat, b.longitude as lng,
                     b.region, b.division, b.district,
@@ -153,7 +153,7 @@ export async function GET(request) {
             }
         } else if (type === 'Industries (SHS)') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (r.schoolid)
                     r.schoolid as id, r.schoolname as name, r.municipality as mun, r.latitude as lat, r.longitude as lng,
                     r.region, r.division, r.district,
                     l.total_enrollment as metric_val
@@ -204,7 +204,7 @@ export async function GET(request) {
             }
         } else if (type === 'Congestion') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (schoolid)
                     schoolid as id, school_name as name, municipality as mun, latitude as lat, longitude as lng,
                     region, division, district, totalenrolment as enrollment,
                     NULLIF(regexp_replace(congestion_2023_2024::text, '[^0-9.-]', '', 'g'), '')::numeric as metric_val,
@@ -216,7 +216,7 @@ export async function GET(request) {
             `;
         } else if (type === 'Last Mile Schools') {
             pointsSql = `
-                SELECT 
+                SELECT DISTINCT ON (l.school_id)
                     l.school_id as id, l.school_name as name, l.municipality as mun, 
                     b.latitude as lat, b.longitude as lng,
                     b.region, b.division, b.district,

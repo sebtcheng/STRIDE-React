@@ -1,55 +1,94 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DataTable from "react-data-table-component";
 import { Search, Database, Download } from "lucide-react";
 
 export default function DataExplorerTab({ filters }) {
     const [data, setData] = useState({ rows: [], totalMatched: 0, loading: true });
+    const [columnFilters, setColumnFilters] = useState({});
+
+    // Client-side filtering logic
+    const filteredResults = useMemo(() => {
+        if (!data.rows) return [];
+        return data.rows.filter(row => {
+            return Object.entries(columnFilters).every(([colId, filterValue]) => {
+                if (!filterValue) return true;
+                const cellValue = String(row[colId] || "").toLowerCase();
+                return cellValue.includes(filterValue.toLowerCase());
+            });
+        });
+    }, [data.rows, columnFilters]);
 
     const domainColumnMap = {
         'School Info': [
-            { id: 'region', label: 'Region' },
-            { id: 'division', label: 'Division' },
-            { id: 'sector', label: 'Sector' },
-            { id: 'curricular_offering', label: 'Offerings' },
-            { id: 'classification', label: 'Class' }
+            { id: 'school_size_typology', label: 'School Size Typology' },
+            { id: 'curricular_offering', label: 'Offerings' }
         ],
         'Teaching Data': [
-            { id: 'total_teaching', label: 'Inventory' },
-            { id: 'total_shortage', label: 'Shortage' },
-            { id: 'total_excess', label: 'Excess' },
-            { id: 'filling_up_rate', label: 'Filling %', format: (val) => `${(Number(val) * 100).toFixed(1)}%` }
+            { id: 'totalteachers', label: 'Total Teachers' },
+            { id: 'total_excess', label: 'Teacher Excess' },
+            { id: 'total_shortage', label: 'Teacher Shortage' }
         ],
         'Non-Teaching': [
-            { id: 'admin_staff', label: 'Admin' },
-            { id: 'support_staff', label: 'Support' }
+            { id: 'outlier_status', label: 'COS' },
+            { id: 'clustering_status', label: 'AOII Clustering Status' }
         ],
         'Enrolment': [
-            { id: 'totalenrolment', label: 'Total' },
-            { id: 'kinder_enrolment', label: 'Kinder' },
-            { id: 'elem_enrolment', label: 'Elem' },
-            { id: 'jhs_enrolment', label: 'JHS' },
-            { id: 'shs_enrolment', label: 'SHS' }
+            { id: 'totalenrolment', label: 'Total Enrolment' },
+            { id: 'kinder', label: 'Kinder' },
+            { id: 'g1', label: 'Grade 1' },
+            { id: 'g2', label: 'Grade 2' },
+            { id: 'g3', label: 'Grade 3' },
+            { id: 'g4', label: 'Grade 4' },
+            { id: 'g5', label: 'Grade 5' },
+            { id: 'g6', label: 'Grade 6' },
+            { id: 'g7', label: 'Grade 7' },
+            { id: 'g8', label: 'Grade 8' },
+            { id: 'g9', label: 'Grade 9' },
+            { id: 'g10', label: 'Grade 10' },
+            { id: 'g11', label: 'Grade 11' },
+            { id: 'g12', label: 'Grade 12' }
         ],
         'Specialization': [
-            { id: 'math_teachers', label: 'Math' },
-            { id: 'science_teachers', label: 'Science' },
-            { id: 'english_teachers', label: 'English' }
+            { id: 'english', label: 'English' },
+            { id: 'mathematics', label: 'Mathematics' },
+            { id: 'science', label: 'Science' },
+            { id: 'biological_sciences', label: 'Biological Sciences' },
+            { id: 'physical_sciences', label: 'Physical Sciences' },
+            { id: 'general_ed', label: 'General Ed' },
+            { id: 'araling_panlipunan', label: 'Araling Panlipunan' },
+            { id: 'tle', label: 'TLE' },
+            { id: 'mapeh', label: 'MAPEH' },
+            { id: 'filipino', label: 'Filipino' },
+            { id: 'esp', label: 'ESP' },
+            { id: 'agriculture', label: 'Agriculture' },
+            { id: 'ece', label: 'ECE' },
+            { id: 'sped', label: 'SPED' }
         ],
         'Infrastructure': [
-            { id: 'classroom_requirement', label: 'Room Req' },
+            { id: 'instructional_rooms_2023_2024', label: 'Classrooms' },
+            { id: 'classroom_requirement', label: 'Classroom Req' },
+            { id: 'classroom_shortage', label: 'Classroom Shortage' },
+            { id: 'buildings', label: 'Buildings' },
+            { id: 'buidable_space', label: 'Buildable Space' },
+            { id: 'major_repair_2023_2024', label: 'Major Repairs' },
+            { id: 'total_seats_2023_2024', label: 'Seats' },
+            { id: 'total_seats_shortage_2023_2024', label: 'Seats Shortage' },
+            { id: 'ownershiptype', label: 'Ownership' },
+            { id: 'electricitysource', label: 'Electricity' },
+            { id: 'watersource', label: 'Water' },
             { id: 'infra_projects', label: 'Projects' },
             { id: 'total_infra_value', label: 'Budget', format: (val) => `₱${Number(val).toLocaleString()}` }
         ]
     };
 
     const downloadCSV = () => {
-        if (!data.rows.length) return;
-        const headers = ['schoolid', 'school_name', ...Object.keys(filters.data_explorer_domains).filter(d => filters.data_explorer_domains[d]).flatMap(d => domainColumnMap[d].map(c => c.id))];
+        if (!filteredResults.length) return;
+        const headers = ['region', 'division', 'district', 'schoolid', 'schoolname', ...Object.keys(filters.data_explorer_selections || {}).flatMap(domain => (filters.data_explorer_selections[domain] || []).filter(id => id !== 'schoolid' && id !== 'schoolname'))];
         const csvContent = [
             headers.join(','),
-            ...data.rows.map(row => headers.map(h => `"${row[h] || 0}"`).join(','))
+            ...filteredResults.map(row => headers.map(h => `"${row[h] || 0}"`).join(','))
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -66,7 +105,7 @@ export default function DataExplorerTab({ filters }) {
         const fetchUrl = new URL(window.location.origin + "/api/data-explorer");
         fetchUrl.searchParams.append("region", filters.region || 'All Regions');
         fetchUrl.searchParams.append("q", filters.q || '');
-        fetchUrl.searchParams.append("limit", "1500");
+        // Limit removed as per user request
 
         const delayDebounce = setTimeout(() => {
             fetch(fetchUrl)
@@ -74,6 +113,9 @@ export default function DataExplorerTab({ filters }) {
                 .then(res => {
                     if (res.status === "success") {
                         setData({ ...res.data, loading: false });
+                    } else {
+                        console.error("Data Explorer API Error:", res.message);
+                        setData(prev => ({ ...prev, loading: false }));
                     }
                 })
                 .catch(err => {
@@ -83,41 +125,76 @@ export default function DataExplorerTab({ filters }) {
         }, 600);
 
         return () => clearTimeout(delayDebounce);
-    }, [filters.global_trigger, filters.region, filters.q]);
+    }, [filters.global_trigger, filters.region, filters.q, JSON.stringify(filters.explorer_divisions)]);
+
+    // Helper to render filter header
+    const renderHeader = (label, id) => (
+        <div className="flex flex-col gap-1.5 py-2 w-full">
+            <span className="font-bold text-white text-[11px] uppercase tracking-wider">{label}</span>
+            <input
+                type="text"
+                placeholder="Search..."
+                className="w-full px-2 py-1 text-[10px] font-medium border border-white/20 rounded focus:outline-none focus:border-blue-300 text-gray-800 bg-white/90"
+                onClick={(e) => e.stopPropagation()}
+                value={columnFilters[id] || ''}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, [id]: e.target.value }))}
+            />
+        </div>
+    );
 
     // Construct Dynamic Columns
     const anchorColumns = [
         {
-            name: 'School ID',
-            selector: row => row.schoolid,
+            name: renderHeader('Region', 'region'),
+            selector: row => row.region,
             sortable: true,
-            width: '120px',
-            style: { position: 'sticky', left: 0, backgroundColor: '#fff', zIndex: 1, borderRight: '2px solid #e2e8f0' }
+            width: '130px'
         },
         {
-            name: 'School Name',
-            selector: row => row.school_name,
+            name: renderHeader('Division', 'division'),
+            selector: row => row.division,
             sortable: true,
-            width: '250px',
-            style: { position: 'sticky', left: '120px', backgroundColor: '#fff', zIndex: 1, borderRight: '2px solid #e2e8f0', fontWeight: 'bold' }
+            width: '160px'
+        },
+        {
+            name: renderHeader('District', 'district'),
+            selector: row => row.district,
+            sortable: true,
+            width: '160px'
+        },
+        {
+            name: renderHeader('School ID', 'schoolid'),
+            selector: row => row.schoolid,
+            sortable: true,
+            width: '130px'
+        },
+        {
+            name: renderHeader('School Name', 'schoolname'),
+            selector: row => row.schoolname,
+            sortable: true,
+            minWidth: '280px',
+            grow: 1
         }
     ];
 
     const dynamicColumns = [];
-    Object.keys(filters.data_explorer_domains).forEach(domain => {
-        if (filters.data_explorer_domains[domain]) {
+    Object.keys(filters.data_explorer_selections || {}).forEach(domain => {
+        const selectedCols = filters.data_explorer_selections[domain] || [];
+        if (selectedCols.length > 0 && domainColumnMap[domain]) {
             domainColumnMap[domain].forEach(col => {
-                dynamicColumns.push({
-                    name: col.label,
-                    selector: row => row[col.id],
-                    sortable: true,
-                    minWidth: '140px',
-                    cell: row => (
-                        <span className={domain === 'Infrastructure' ? 'font-bold text-[#CE1126]' : ''}>
-                            {col.format ? col.format(row[col.id]) : (row[col.id] || 0).toLocaleString()}
-                        </span>
-                    )
-                });
+                if (selectedCols.includes(col.id)) {
+                    dynamicColumns.push({
+                        name: renderHeader(col.label, col.id),
+                        selector: row => row[col.id],
+                        sortable: true,
+                        minWidth: '150px',
+                        cell: row => (
+                            <span className={domain === 'Infrastructure' ? 'font-bold text-[#CE1126]' : ''}>
+                                {col.format ? col.format(row[col.id]) : (row[col.id] || 0).toLocaleString()}
+                            </span>
+                        )
+                    });
+                }
             });
         }
     });
@@ -141,6 +218,9 @@ export default function DataExplorerTab({ filters }) {
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Ready • Jan 2026 Batch
                         </div>
                     </div>
+                    <div className="flex gap-2 text-sm font-bold text-[#003366]">
+                        {filteredResults.length.toLocaleString()} Schools Visible
+                    </div>
                     <div className="flex gap-2">
                         <button onClick={downloadCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#003366] text-white rounded-lg text-xs hover:bg-[#002244] transition-all font-bold shadow-md">
                             <Download size={12} /> CSV
@@ -159,7 +239,7 @@ export default function DataExplorerTab({ filters }) {
                 <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full overflow-hidden flex flex-col">
                     <DataTable
                         columns={finalColumns}
-                        data={data.rows}
+                        data={filteredResults}
                         pagination
                         paginationPerPage={20}
                         progressPending={data.loading}
@@ -168,6 +248,7 @@ export default function DataExplorerTab({ filters }) {
                         fixedHeaderScrollHeight="100%"
                         highlightOnHover
                         responsive
+                        persistTableHead
                         customStyles={{
                             header: { style: { minHeight: '0px' } },
                             headRow: {
@@ -179,8 +260,29 @@ export default function DataExplorerTab({ filters }) {
                                     fontSize: '11px',
                                     letterSpacing: '0.05em',
                                     borderTopLeftRadius: '16px',
-                                    borderTopRightRadius: '16px'
+                                    borderTopRightRadius: '16px',
+                                    minHeight: '80px'
                                 },
+                            },
+                            headCells: {
+                                style: {
+                                    paddingLeft: '12px',
+                                    paddingRight: '12px',
+                                    '&:nth-child(1)': { position: 'sticky', left: 0, backgroundColor: '#003366', zIndex: 10 },
+                                    '&:nth-child(2)': { position: 'sticky', left: '130px', backgroundColor: '#003366', zIndex: 10 },
+                                    '&:nth-child(3)': { position: 'sticky', left: '290px', backgroundColor: '#003366', zIndex: 10 },
+                                    '&:nth-child(4)': { position: 'sticky', left: '450px', backgroundColor: '#003366', zIndex: 10 },
+                                    '&:nth-child(5)': { position: 'sticky', left: '580px', backgroundColor: '#003366', zIndex: 10, borderRight: '2px solid rgba(255,255,255,0.1)' },
+                                }
+                            },
+                            cells: {
+                                style: {
+                                    '&:nth-child(1)': { position: 'sticky', left: 0, backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
+                                    '&:nth-child(2)': { position: 'sticky', left: '130px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
+                                    '&:nth-child(3)': { position: 'sticky', left: '290px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
+                                    '&:nth-child(4)': { position: 'sticky', left: '450px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
+                                    '&:nth-child(5)': { position: 'sticky', left: '580px', backgroundColor: '#fff', zIndex: 9, borderRight: '2px solid #e2e8f0', fontWeight: 'bold' },
+                                }
                             }
                         }}
                     />

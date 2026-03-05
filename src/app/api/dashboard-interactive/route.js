@@ -56,8 +56,8 @@ export async function GET(request) {
         }
 
         const baseTable = (groupBy === 'legislative_district' && level === 'Division') || (level === 'DistrictGroup' && legislativeDistrictParams)
-            ? '(SELECT d.*, r.legislative_district FROM dim_schools d LEFT JOIN raw_school_unique_v2 r ON d.schoolid = r.schoolid) AS base_table'
-            : 'dim_schools';
+            ? '(SELECT d.*, r.legislative_district FROM (SELECT DISTINCT ON (schoolid) * FROM dim_schools) d LEFT JOIN raw_school_unique_v2 r ON d.schoolid = r.schoolid) AS base_table'
+            : '(SELECT DISTINCT ON (schoolid) * FROM dim_schools) AS base_table';
 
         // 1. Definition Map (Connecting UI IDs to SQL implementations)
         const schemaDef = {
@@ -97,6 +97,49 @@ export async function GET(request) {
 
         // 2. Dynamic Pipeline Mapper (equivalent to purrr::map backend logic)
         for (const metric of metrics) {
+            // SPECIAL CASE: Teacher Shortage override requested by user
+            if (metric === 'TotalShortage') {
+                let tsGroupCol = 'region';
+                let tsFilterSql = 'WHERE 1=1';
+                let tsParams = [];
+
+                if (level === 'Region' && region && region !== 'All Regions') {
+                    tsGroupCol = 'division';
+                    tsParams.push(region);
+                    tsFilterSql += ` AND region = $${tsParams.length}`;
+                } else if (level === 'Division' && division) {
+                    // Maximum drilldown for teachershortage table is division
+                    tsGroupCol = 'division';
+                    tsParams.push(division);
+                    tsFilterSql += ` AND division = $${tsParams.length}`;
+                }
+
+                const sql = `
+                    SELECT ${tsGroupCol} as label, SUM(CAST(NULLIF(teacher_shortage2026::text, '') AS numeric)) as value
+                    FROM teachershortage
+                    ${tsFilterSql}
+                    GROUP BY ${tsGroupCol}
+                    ORDER BY value DESC
+                `;
+                const res = await pool.query(sql, tsParams);
+
+                const sumSql = `SELECT SUM(CAST(NULLIF(teacher_shortage2026::text, '') AS numeric)) as total FROM teachershortage ${tsFilterSql}`;
+                const sumRes = await pool.query(sumSql, tsParams);
+
+                results[metric] = {
+                    id: metric,
+                    title: `Teacher Shortage by ${tsGroupCol.charAt(0).toUpperCase() + tsGroupCol.slice(1)}`,
+                    subtitle: geogTitle + ' | Note: Uses SY 2024-2025 LIS enrollment and DBM-GMIS PSIPOP teaching inventory as part of the FY 2026 proposal.',
+                    type: 'numeric',
+                    total: sumRes.rows[0]?.total ? Number(sumRes.rows[0].total) : 0,
+                    data: {
+                        labels: res.rows.map(r => r.label),
+                        values: res.rows.map(r => Number(r.value))
+                    }
+                };
+                continue;
+            }
+
             const def = schemaDef[metric] || { type: 'SUM', label: metric.replace(/([A-Z])/g, ' $1').trim(), sql: `SUM(CAST(NULLIF(totalenrolment::text, '') AS numeric))` }; // Safe fallback
 
             if (def.type === 'CATEGORICAL') {

@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
-import { Search, MapPin, X } from "lucide-react";
+import { Search, MapPin, X, Info } from "lucide-react";
+import SchoolProfileModal from "./SchoolProfileModal";
 
 // Dynamically load the Leaflet wrapper to prevent SSR issues and React 18 piecemeal DOM chunking bugs
 const DynamicMap = dynamic(
@@ -19,9 +20,26 @@ export default function SchoolLocatorTab({ filters }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedModalSchool, setSelectedModalSchool] = useState(null);
+    const [fullProfile, setFullProfile] = useState(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
 
     useEffect(() => {
         async function fetchSchools() {
+            // Prevent initial load until a filter is applied
+            const hasFilter = filters.q ||
+                (filters.region && filters.region !== 'All Regions') ||
+                filters.division ||
+                filters.municipality ||
+                filters.legislative_district;
+
+            if (!hasFilter) {
+                setSchools([]);
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             setError(null);
             try {
@@ -57,6 +75,23 @@ export default function SchoolLocatorTab({ filters }) {
         { name: "School Name", selector: (row) => row.name, sortable: true, grow: 2 },
         { name: "Region", selector: (row) => row.region, sortable: true },
         { name: "Division", selector: (row) => row.division, sortable: true },
+        {
+            name: "Action",
+            cell: (row) => (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkerClick(row);
+                    }}
+                    className="p-1.5 bg-[#003366]/10 text-[#003366] rounded-full hover:bg-[#003366] hover:text-white transition-colors"
+                    title="View Full Profile"
+                >
+                    <Info size={16} />
+                </button>
+            ),
+            width: "80px",
+            button: true
+        }
     ], []);
 
     // Local Search Filtering
@@ -76,10 +111,28 @@ export default function SchoolLocatorTab({ filters }) {
         setSelectedSchool(row);
     };
 
+    const handleMarkerClick = async (school) => {
+        setSelectedModalSchool(school);
+        setIsModalOpen(true);
+        setLoadingProfile(true);
+        setFullProfile(null);
+        try {
+            const res = await fetch(`/api/school-profile/${school.id}`);
+            const data = await res.json();
+            if (data.status === "success") {
+                setFullProfile(data.data);
+            }
+        } catch (e) {
+            console.error("Profile fetch failed:", e);
+        } finally {
+            setLoadingProfile(false);
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white relative">
             {/* Top Split View */}
-            <div className="flex-1 flex flex-col lg:flex-row h-[70vh]">
+            <div className="flex-1 flex flex-col lg:flex-row h-full">
 
                 {/* Left Data Table Pane */}
                 <div className="w-full lg:w-1/2 p-4 border-r border-gray-200 flex flex-col h-full bg-gray-50/30">
@@ -116,6 +169,7 @@ export default function SchoolLocatorTab({ filters }) {
                             highlightOnHover
                             pointerOnHover
                             onRowClicked={handleRowClick}
+                            noDataComponent={<div className="p-10 text-gray-400">Search for a school or use filters to begin</div>}
                             customStyles={{
                                 headRow: { style: { backgroundColor: '#003366', color: 'white', fontWeight: 'bold' } },
                                 rows: { style: { '&:hover': { backgroundColor: '#f0f9ff' } } }
@@ -131,32 +185,17 @@ export default function SchoolLocatorTab({ filters }) {
                             <strong>Error loading map data:</strong> {error}
                         </div>
                     )}
-                    <DynamicMap selectedSchool={selectedSchool} activeSchools={deferredSchools} />
+                    <DynamicMap selectedSchool={selectedSchool} activeSchools={deferredSchools} onMarkerClick={handleMarkerClick} />
                 </div>
             </div>
 
-            {/* Bottom Detail Panel */}
-            <div className="h-48 border-t-4 border-[#003366] bg-zinc-50 p-6 flex items-center justify-center shrink-0 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-10">
-                {selectedSchool ? (
-                    <div className="w-full max-w-4xl flex items-start gap-6">
-                        <div className="p-4 bg-blue-100 rounded-full text-[#003366]">
-                            <MapPin size={32} />
-                        </div>
-                        <div className="w-full">
-                            <h3 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2 mb-2">
-                                {selectedSchool.name} <span className="text-sm font-normal text-gray-500 ml-2">({selectedSchool.id})</span>
-                            </h3>
-                            <div className="grid grid-cols-3 gap-8 mt-4 text-sm">
-                                <div><strong className="text-gray-500 block">Region</strong> <span className="font-semibold text-gray-900">{selectedSchool.region}</span></div>
-                                <div><strong className="text-gray-500 block">Division</strong> <span className="font-semibold text-gray-900">{selectedSchool.division}</span></div>
-                                <div><strong className="text-gray-500 block">Municipality</strong> <span className="font-semibold text-gray-900">{selectedSchool.municipality || 'N/A'}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <p className="text-gray-400 font-medium">Select a school from the table to view granular details.</p>
-                )}
-            </div>
+            <SchoolProfileModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                school={selectedModalSchool}
+                fullProfile={fullProfile}
+                loadingProfile={loadingProfile}
+            />
         </div>
     );
 }

@@ -38,7 +38,7 @@ export async function POST(request) {
                 COUNT(f.schoolid) as total_projects,
                 SUM(CASE WHEN f.status ILIKE '%complet%' THEN 1 ELSE 0 END)::NUMERIC / NULLIF(COUNT(f.schoolid), 0) as avg_completion
             FROM fact_efd_masterlist f
-            LEFT JOIN dim_schools s ON f.schoolid = s.schoolid
+            LEFT JOIN (SELECT DISTINCT ON (schoolid) * FROM dim_schools) s ON f.schoolid = s.schoolid
             WHERE ${whereClause}
             GROUP BY f.fundingyear, f.typeefd
             ORDER BY f.fundingyear ASC, f.typeefd ASC

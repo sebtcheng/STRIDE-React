@@ -12,7 +12,7 @@ export async function GET(request) {
 
         // Build SQL Query with LEFT JOIN to EFD Masterlist for Infra Project data
         let sql = `
-            SELECT 
+            SELECT DISTINCT ON (s.schoolid, s.region)
                 s.schoolid as id, 
                 s.school_name as name, 
                 s.region, 

@@ -123,7 +123,12 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
         { name: "Teacher", icon: <Users size={16} /> },
         { name: "Master Teacher", icon: <Users size={16} /> },
         { name: "Principal", icon: <Users size={16} /> },
-        { name: "Admin Officer", icon: <Users size={16} /> }
+        { name: "Head Teacher", icon: <Users size={16} /> },
+        { name: "Guidance Coordinator", icon: <Users size={16} /> },
+        { name: "Guidance Counselor", icon: <Users size={16} /> },
+        { name: "Engineer", icon: <Users size={16} /> },
+        { name: "Admin Officer", icon: <Users size={16} /> },
+        { name: "Admin Assistant", icon: <Users size={16} /> }
     ];
 
     const presetMappings = {
@@ -174,21 +179,100 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
     const handlePlantillaPresetToggle = (presetName) => {
         let matched = [];
         if (presetName === "Teacher") {
-            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Teacher") && !pos.includes("Master") && !pos.includes("Head"));
+            matched = ["Teacher I", "Teacher II", "Teacher III", "Special Science Teacher I", "Special Science Teacher II"];
         } else if (presetName === "Master Teacher") {
-            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Master Teacher"));
+            matched = ["Master Teacher I", "Master Teacher II", "Master Teacher III", "Master Teacher IV"];
         } else if (presetName === "Principal") {
-            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Principal"));
+            matched = ["School Principal I", "School Principal II", "School Principal III", "School Principal IV"];
+        } else if (presetName === "Head Teacher") {
+            matched = ["Head Teacher I", "Head Teacher II", "Head Teacher III", "Head Teacher IV", "Head Teacher V", "Head Teacher VI"];
+        } else if (presetName === "Guidance Coordinator") {
+            matched = ["Guidance Coordinator I", "Guidance Coordinator II", "Guidance Coordinator III"];
+        } else if (presetName === "Guidance Counselor") {
+            matched = ["Guidance Counselor I", "Guidance Counselor II", "Guidance Counselor III"];
+        } else if (presetName === "Engineer") {
+            matched = ["Engineer II", "Engineer III", "Engineer IV", "Engineer V"];
         } else if (presetName === "Admin Officer") {
-            matched = dbSchema.gmisPositions.filter(pos => pos.includes("Administrative Officer") || pos.includes("Admin Officer"));
+            matched = ["Administrative Officer I", "Administrative Officer II", "Administrative Officer III", "Administrative Officer IV", "Administrative Officer V", "Chief Administrative Officer", "Supervising Administrative Officer "];
+        } else if (presetName === "Admin Assistant") {
+            matched = ["Administrative Assistant I", "Administrative Assistant II", "Administrative Assistant III", "Administrative Assistant V", "Administrative Assistant VI", "Senior Administrative Assistant I", "Senior Administrative Assistant II", "Senior Administrative Assistant III", "Senior Administrative Assistant V"];
         }
 
-        // Uncheck if same preset clicked
         if (filters.plantilla_preset === presetName) {
             setFilters({ plantilla_preset: null, selected_positions: [] });
         } else {
             setFilters({ plantilla_preset: presetName, selected_positions: matched });
         }
+    };
+
+    const handleExplorerToggle = (domain, colId) => {
+        const currentSelections = { ...(filters.data_explorer_selections || {}) };
+        const domainColIds = currentSelections[domain] || [];
+
+        let nextIds;
+        if (domainColIds.includes(colId)) {
+            nextIds = domainColIds.filter(id => id !== colId);
+        } else {
+            nextIds = [...domainColIds, colId];
+        }
+
+        setFilters({
+            data_explorer_selections: {
+                ...currentSelections,
+                [domain]: nextIds
+            }
+        });
+    };
+
+    const explorerDomainOptions = {
+        "School Information Data Toggles": [
+            { group: "Categorization", options: [{ id: "school_size_typology", label: "School Size Typology" }, { id: "curricular_offering", label: "Curricular Offering" }] }
+        ],
+        "Teaching Data Toggles": [
+            { group: "Staff Counts", options: [{ id: "totalteachers", label: "Total Teachers" }, { id: "total_excess", label: "Teacher Excess" }, { id: "total_shortage", label: "Teacher Shortage" }] }
+        ],
+        "Non-teaching Data Toggles": [
+            { group: "Staff Counts", options: [{ id: "outlier_status", label: "COS" }, { id: "clustering_status", label: "AOII Clustering Status" }] }
+        ],
+        "Enrolment Data Toggles": [
+            {
+                group: "By Level", options: [
+                    { id: "totalenrolment", label: "Total Enrolment" },
+                    { id: "kinder", label: "Kinder" }, { id: "g1", label: "Grade 1" }, { id: "g2", label: "Grade 2" }, { id: "g3", label: "Grade 3" },
+                    { id: "g4", label: "Grade 4" }, { id: "g5", label: "Grade 5" }, { id: "g6", label: "Grade 6" },
+                    { id: "g7", label: "Grade 7" }, { id: "g8", label: "Grade 8" }, { id: "g9", label: "Grade 9" }, { id: "g10", label: "Grade 10" },
+                    { id: "g11", label: "Grade 11" }, { id: "g12", label: "Grade 12" }
+                ]
+            }
+        ],
+        "Specialization Data Toggles": [
+            {
+                group: "Specialization", options: [
+                    { id: "english", label: "English" }, { id: "mathematics", label: "Mathematics" },
+                    { id: "science", label: "Science" }, { id: "biological_sciences", label: "Biological Sciences" },
+                    { id: "physical_sciences", label: "Physical Sciences" }, { id: "general_ed", label: "General Ed" },
+                    { id: "araling_panlipunan", label: "Araling Panlipunan" }, { id: "tle", label: "TLE" },
+                    { id: "mapeh", label: "MAPEH" }, { id: "filipino", label: "Filipino" },
+                    { id: "esp", label: "ESP" }, { id: "agriculture", label: "Agriculture" },
+                    { id: "ece", label: "ECE" }, { id: "sped", label: "SPED" }
+                ]
+            }
+        ],
+        "Infrastructure Data Toggles": [
+            { group: "Classrooms", options: [{ id: "instructional_rooms_2023_2024", label: "Classrooms" }, { id: "classroom_requirement", label: "Classroom Requirement" }, { id: "classroom_shortage", label: "Classroom Shortage" }] },
+            { group: "Buildings & Space", options: [{ id: "buildings", label: "Buildings" }, { id: "buidable_space", label: "Buildable Space" }, { id: "major_repair_2023_2024", label: "Major Repairs Needed" }] },
+            { group: "Other", options: [{ id: "total_seats_2023_2024", label: "Seats Inventory" }, { id: "total_seats_shortage_2023_2024", label: "Seats Shortage" }] },
+            { group: "Utilities", options: [{ id: "ownershiptype", label: "Ownership Type" }, { id: "electricitysource", label: "Electricity Source" }, { id: "watersource", label: "Water Source" }] }
+        ]
+    };
+
+    const explorerDomainToFilterKey = {
+        "School Information Data Toggles": "School Info",
+        "Teaching Data Toggles": "Teaching Data",
+        "Non-teaching Data Toggles": "Non-Teaching",
+        "Enrolment Data Toggles": "Enrolment",
+        "Specialization Data Toggles": "Specialization",
+        "Infrastructure Data Toggles": "Infrastructure"
     };
 
     const handlePositionToggle = (posId) => {
@@ -734,40 +818,68 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                     </section>
                 )}
 
-                {/* 5A. Data Explorer - Dynamic Report Builder */}
+                {/* 5A. Data Explorer (Information Database) */}
                 {activeTab === "data_explorer" && (
-                    <section className="space-y-4">
+                    <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-4 bg-[#003366] p-3 rounded-xl text-white shadow-lg">
                             <Settings2 size={18} className="text-[#FFB81C]" />
                             <h3 className="text-xs font-black uppercase tracking-tight">Report Builder Config</h3>
                         </div>
 
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">Select Data Domains</p>
-                            {Object.keys(filters.data_explorer_domains).map(cat => (
-                                <label key={cat} className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${filters.data_explorer_domains[cat] ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100 hover:border-gray-200'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${filters.data_explorer_domains[cat] ? 'bg-[#003366]' : 'bg-gray-300'}`}></div>
-                                        <span className={`text-xs font-bold ${filters.data_explorer_domains[cat] ? 'text-[#003366]' : 'text-gray-500'}`}>{cat}</span>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.data_explorer_domains[cat]}
-                                        onChange={() => {
-                                            const updatedDomains = { ...filters.data_explorer_domains, [cat]: !filters.data_explorer_domains[cat] };
-                                            setFilters({ data_explorer_domains: updatedDomains });
-                                        }}
-                                        className="rounded text-[#003366] focus:ring-[#003366]"
+                        {/* A. Geo Filters */}
+                        <section className="space-y-4">
+                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">Scope Selection</h3>
+                            <SelectDropdown
+                                label="Select a Region:"
+                                field="region"
+                                options={dbSchema.uniRegions}
+                                placeholder="All Regions"
+                                filters={filters}
+                                setFilters={setFilters}
+                            />
+
+                            <MultiSelectDropdown
+                                title="Select a Division:"
+                                groups={[{ group: "Divisions", options: dbSchema.uniDivisions.map(d => ({ id: d, label: d })) }]}
+                                isOpen={openDropdown === "explorer_divisions"}
+                                onToggle={() => setOpenDropdown(openDropdown === "explorer_divisions" ? null : "explorer_divisions")}
+                                filters={filters}
+                                handleMetricToggle={(val) => {
+                                    const current = new Set(filters.explorer_divisions || []);
+                                    if (current.has(val)) current.delete(val);
+                                    else current.add(val);
+                                    setFilters({ explorer_divisions: Array.from(current) });
+                                }}
+                                selectedKey="explorer_divisions"
+                            />
+                        </section>
+
+                        {/* B. Data Toggles */}
+                        <section className="space-y-3 pt-4 border-t border-gray-100">
+                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Data Toggles</h3>
+
+                            {Object.entries(explorerDomainOptions).map(([title, groups]) => {
+                                const filterKey = explorerDomainToFilterKey[title];
+                                return (
+                                    <MultiSelectDropdown
+                                        key={title}
+                                        title={title}
+                                        groups={groups}
+                                        isOpen={openDropdown === title}
+                                        onToggle={() => setOpenDropdown(openDropdown === title ? null : title)}
+                                        filters={{ ...filters, explorer_selections: filters.data_explorer_selections?.[filterKey] || [] }}
+                                        handleMetricToggle={(colId) => handleExplorerToggle(filterKey, colId)}
+                                        selectedKey="explorer_selections"
                                     />
-                                </label>
-                            ))}
-                        </div>
+                                );
+                            })}
+                        </section>
 
                         <div className="mt-6 p-4 bg-[#CE1126]/5 rounded-xl border border-[#CE1126]/10">
                             <h4 className="text-[10px] font-black text-[#CE1126] uppercase mb-2">Authenticated View</h4>
                             <p className="text-[10px] text-gray-600 leading-relaxed italic">Restricted data domain access. Exports are logged for security compliance.</p>
                         </div>
-                    </section>
+                    </div>
                 )}
 
             </div>
