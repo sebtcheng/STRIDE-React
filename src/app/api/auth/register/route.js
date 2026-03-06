@@ -25,6 +25,23 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
         }
 
+        if (!userData.otpCode) {
+            return NextResponse.json({ error: 'An OTP code is strictly required to register.' }, { status: 400 });
+        }
+
+        // Extremely restrictive OTP verification just before insert
+        const verifyOtpQuery = `
+            SELECT id FROM otps 
+            WHERE email = $1 AND otp_code = $2 AND expires_at > NOW()
+        `;
+        const authOtpRes = await pool.query(verifyOtpQuery, [email.toLowerCase(), userData.otpCode]);
+        if (authOtpRes.rows.length === 0) {
+            return NextResponse.json({ error: 'Invalid or expired OTP. You cannot register.' }, { status: 401 });
+        }
+
+        // OTP Valid. Let's delete it so it can't be reused.
+        await pool.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
-import { Search, Info, MapPin, Loader2, Database, BarChart2, ArrowLeft } from "lucide-react";
+import { Search, Info, MapPin, Loader2, Database, BarChart2, ArrowLeft, Download } from "lucide-react";
 import SchoolProfileModal from "./SchoolProfileModal";
 
 const DynamicMap = dynamic(
@@ -169,6 +169,64 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
 
     const handleRowClick = (row) => setSelectedSchool(row);
 
+    const downloadCSV = async () => {
+        if (!filters.aa_variables || filters.aa_variables.length === 0) return;
+        try {
+            const req = await fetch('/api/advanced-analytics/export-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    variables: filters.aa_variables,
+                    region: filters.region,
+                    division: filters.division,
+                    municipality: filters.municipality
+                })
+            });
+            if (!req.ok) throw new Error("Failed to export CSV");
+
+            const blob = await req.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `STRIDE_AdvancedAnalytics_RawDB_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) {
+            console.error("CSV Download Failed:", e);
+            alert("Failed to download CSV.");
+        }
+    };
+
+    const downloadReport = async () => {
+        if (!graphData) return;
+        try {
+            const req = await fetch('/api/advanced-analytics/export-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    graphData,
+                    filters,
+                    total,
+                    totalEntries
+                })
+            });
+            if (!req.ok) throw new Error("Failed to export Report");
+
+            const blob = await req.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `STRIDE_AdvancedAnalytics_Report_${new Date().toISOString().split('T')[0]}.html`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) {
+            console.error("Report Download Failed:", e);
+            alert("Failed to download Report.");
+        }
+    };
+
     const handleMarkerClick = async (school) => {
         setSelectedModalSchool(school);
         setIsModalOpen(true);
@@ -240,11 +298,29 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                             )}
                         </span>
                     </h3>
-                    {loading && (
-                        <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                            <Loader2 size={12} className="animate-spin" /> Querying Dataset...
-                        </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {hasQueried && !loading && results.length > 0 && (
+                            <>
+                                <button
+                                    onClick={downloadReport}
+                                    className="bg-gray-100 hover:bg-gray-200 text-[#003366] px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm flex items-center gap-2 font-bold text-xs transition-all"
+                                >
+                                    <BarChart2 size={14} /> EXPORT REPORT
+                                </button>
+                                <button
+                                    onClick={downloadCSV}
+                                    className="bg-[#003366] hover:bg-[#002244] text-white px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 font-bold text-xs transition-all"
+                                >
+                                    <Download size={14} /> EXPORT CSV
+                                </button>
+                            </>
+                        )}
+                        {loading && (
+                            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                <Loader2 size={12} className="animate-spin" /> Querying Dataset...
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {hasQueried && !loading && results.length === 0 ? (

@@ -9,7 +9,8 @@ import {
     Map,
     CloudIcon,
     Database,
-    Mail
+    Mail,
+    LogOut
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -44,22 +45,22 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
     return (
         <nav className="bg-white text-gray-800 shadow-sm border-b-4 border-[#003366] sticky top-0 z-50 flex items-center justify-between px-4 py-2" ref={navRef}>
             {/* Left Branding Area */}
-            <div className="flex items-center gap-2 shrink-0 h-full">
+            <div className="flex items-center gap-4 shrink-0 h-full">
                 <img
-                    src="/img/logo3.png"
+                    src="/img/deped_logo.png"
                     alt="DepEd Logo"
-                    style={{ height: '36px', width: '36px', objectFit: 'contain' }}
-                    className="flex-none"
+                    className="w-10 h-10 object-contain"
                 />
-                <img
-                    src="/img/Stridelogo1.png"
-                    alt="STRIDE Logo"
-                    style={{ height: '24px', width: 'auto', objectFit: 'contain' }}
-                    className="flex-none ml-1"
-                />
-                <span className="text-[12px] font-medium text-gray-500 leading-tight tracking-wide ml-2 hidden lg:inline-block">
-                    Strategic Inventory for Deployment Efficiency
-                </span>
+                <div className="flex flex-col justify-center">
+                    <div className="flex items-center font-black italic tracking-tighter text-4xl cursor-default select-none group leading-none">
+                        <span className="text-[#003366]">STR</span>
+                        <span className="text-[#FFB81C]">I</span>
+                        <span className="text-[#CE1126]">DE</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-tight uppercase mt-0.5 whitespace-nowrap">
+                        Strategic Resource Inventory for Deployment Efficiency
+                    </span>
+                </div>
             </div>
 
             {/* Right Side Navigation */}
@@ -145,6 +146,17 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                             <Mail size={16} className="text-gray-700" />
                             Contact Us
                         </button>
+
+                        {/* Vertical Divider & Logout */}
+                        <div className="flex items-center pl-4 border-l border-gray-300 ml-2 h-8 shrink-0 mt-1">
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-1.5 text-[#CE1126] hover:text-red-800 font-bold text-[13px] transition-colors whitespace-nowrap"
+                            >
+                                <LogOut size={16} />
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

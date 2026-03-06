@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
         return data.user;
     };
 
-    const registerWithEmail = async (email, password, userData) => {
+    const registerWithEmail = async (email, password, otpCode, userData) => {
         if (!email.toLowerCase().endsWith("@deped.gov.ph")) {
             throw new Error("Unauthorized: Only @deped.gov.ph emails are allowed.");
         }
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, ...userData })
+            body: JSON.stringify({ email, password, otpCode, ...userData })
         });
 
         const data = await res.json();

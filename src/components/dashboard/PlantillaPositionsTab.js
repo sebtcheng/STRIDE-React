@@ -49,6 +49,68 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
             });
     }, [filters.region, filters.division, filters.selected_positions, filters.drillLevel]);
 
+    // Handle Report Generation Trigger
+    useEffect(() => {
+        if (filters.report_trigger && data.positionsData && data.positionsData.length > 0) {
+            const generateReport = async () => {
+                const { generateHTMLReport } = await import("@/lib/reportGenerator");
+                const subtitle = `Plantilla Position Breakdown - ${filters.drillLevel} Scope`;
+
+                const charts = data.positionsData.map(posData => {
+                    const textLabels = posData.chartData.groupings.map((g, i) => {
+                        const total = posData.chartData.filled[i] + posData.chartData.unfilled[i];
+                        const rate = total > 0 ? ((posData.chartData.filled[i] / total) * 100).toFixed(1) : 0;
+                        return `${total.toLocaleString()} (${rate}%)`;
+                    });
+
+                    return {
+                        title: posData.position,
+                        data: [
+                            {
+                                y: posData.chartData.groupings,
+                                x: posData.chartData.filled,
+                                type: 'bar',
+                                orientation: 'h',
+                                marker: { color: '#003366' },
+                                name: 'Filled'
+                            },
+                            {
+                                y: posData.chartData.groupings,
+                                x: posData.chartData.unfilled,
+                                type: 'bar',
+                                orientation: 'h',
+                                marker: { color: '#FFB81C' },
+                                name: 'Unfilled',
+                                text: textLabels,
+                                textposition: 'outside',
+                                cliponaxis: false
+                            }
+                        ],
+                        layout: {
+                            barmode: 'stack',
+                            yaxis: { autorange: 'reversed', automargin: true }
+                        }
+                    };
+                });
+
+                generateHTMLReport(
+                    "Plantilla Positions Report",
+                    subtitle,
+                    charts,
+                    {
+                        region: filters.region,
+                        division: filters.division,
+                        drill_level: filters.drillLevel,
+                        filters: {
+                            positions: filters.selected_positions
+                        }
+                    }
+                );
+            };
+            generateReport();
+        }
+    }, [filters.report_trigger, data.positionsData]);
+
     const handleChartClick = (name, groupingLevel) => {
         if (!name) return;
         const clickedName = String(name).trim();

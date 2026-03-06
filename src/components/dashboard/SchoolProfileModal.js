@@ -66,11 +66,11 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 <Building2 size={24} />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black leading-tight tracking-tight">{school.name}</h2>
+                                <h2 className="text-2xl font-black leading-tight tracking-tight">{fullProfile?.profile?.school_name || school?.name || school?.school_name || 'Unknown School'}</h2>
                                 <p className="text-blue-200 text-xs font-bold tracking-widest uppercase flex items-center gap-2">
-                                    ID: {school.id}
+                                    ID: {school?.id || school?.schoolid}
                                     <span className="opacity-30">•</span>
-                                    {school.municipality}, {school.region}
+                                    {fullProfile?.profile?.municipality || school?.municipality}, {fullProfile?.profile?.region || school?.region}
                                 </p>
                             </div>
                         </div>
@@ -112,7 +112,7 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 <InfoCard title="Geographic Coordinates" icon={<MapPin size={16} />} color="purple">
                                     <DataItem label="Region / Division" value={`${fullProfile.profile.region} | ${fullProfile.profile.division}`} />
                                     <DataItem label="District / Mun" value={`${fullProfile.profile.district || 'N/A'} | ${fullProfile.profile.municipality}`} />
-                                    <DataItem label="Barangay" value={fullProfile.profile.barangay} subValue={`Coord: ${fullProfile.profile.latitude}, ${fullProfile.profile.longitude}`} />
+                                    <DataItem label="Barangay" value={fullProfile.profile.barangay || 'N/A'} subValue={`Coord: ${fullProfile.profile.latitude || '0'}, ${fullProfile.profile.longitude || '0'}`} />
                                 </InfoCard>
                             </div>
 
@@ -125,38 +125,38 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <InfoCard title="Elementary Breakdown" icon={<Users size={16} />} color="green">
-                                        <DataItem label="Kinder" value={(fullProfile.profile.kinder || 0).toLocaleString()} />
-                                        <DataItem label="Grade 1" value={(fullProfile.profile.g1 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 2" value={(fullProfile.profile.g2 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 3" value={(fullProfile.profile.g3 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 4" value={(fullProfile.profile.g4 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 5" value={(fullProfile.profile.g5 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 6" value={(fullProfile.profile.g6 || 0).toLocaleString()} />
+                                        <DataItem label="Kinder" value={Number(fullProfile.profile.kinder || 0).toLocaleString()} />
+                                        <DataItem label="Grade 1" value={Number(fullProfile.profile.g1 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 2" value={Number(fullProfile.profile.g2 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 3" value={Number(fullProfile.profile.g3 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 4" value={Number(fullProfile.profile.g4 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 5" value={Number(fullProfile.profile.g5 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 6" value={Number(fullProfile.profile.g6 || 0).toLocaleString()} />
                                         <div className="pt-2 mt-2 border-t border-green-200">
                                             <DataItem label="Elem Subtotal" value={((Number(fullProfile.profile.kinder) || 0) + (Number(fullProfile.profile.g1) || 0) + (Number(fullProfile.profile.g2) || 0) + (Number(fullProfile.profile.g3) || 0) + (Number(fullProfile.profile.g4) || 0) + (Number(fullProfile.profile.g5) || 0) + (Number(fullProfile.profile.g6) || 0)).toLocaleString()} />
                                         </div>
                                     </InfoCard>
                                     <InfoCard title="Secondary Population" icon={<Users size={16} />} color="green">
-                                        <DataItem label="Grade 7" value={(fullProfile.profile.g7 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 8" value={(fullProfile.profile.g8 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 9" value={(fullProfile.profile.g9 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 10" value={(fullProfile.profile.g10 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 7" value={Number(fullProfile.profile.g7 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 8" value={Number(fullProfile.profile.g8 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 9" value={Number(fullProfile.profile.g9 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 10" value={Number(fullProfile.profile.g10 || 0).toLocaleString()} />
                                         <div className="pt-1 mt-1 border-t border-green-200/50 mb-2">
                                             <DataItem label="JHS Subtotal" value={((Number(fullProfile.profile.g7) || 0) + (Number(fullProfile.profile.g8) || 0) + (Number(fullProfile.profile.g9) || 0) + (Number(fullProfile.profile.g10) || 0)).toLocaleString()} />
                                         </div>
-                                        <DataItem label="Grade 11" value={(fullProfile.profile.g11 || 0).toLocaleString()} />
-                                        <DataItem label="Grade 12" value={(fullProfile.profile.g12 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 11" value={Number(fullProfile.profile.g11 || 0).toLocaleString()} />
+                                        <DataItem label="Grade 12" value={Number(fullProfile.profile.g12 || 0).toLocaleString()} />
                                         <div className="pt-1 mt-1 border-t border-green-200/50 mb-2">
                                             <DataItem label="SHS Subtotal" value={((Number(fullProfile.profile.g11) || 0) + (Number(fullProfile.profile.g12) || 0)).toLocaleString()} />
                                         </div>
                                         <div className="pt-2 mt-2 border-t border-green-200">
-                                            <DataItem label="Total Enrolment" value={(fullProfile.profile.totalenrolment || 0).toLocaleString()} />
+                                            <DataItem label="Total Enrolment" value={Number(fullProfile.profile.totalenrolment || 0).toLocaleString()} />
                                         </div>
                                     </InfoCard>
                                     <InfoCard title="Ancillary Metrics" icon={<AlertCircle size={16} />} color="purple">
                                         <DataItem label="LMS Status" value={fullProfile.profile.sha_2024_index ? "YES" : "NO"} />
                                         <DataItem label="School Size" value={fullProfile.profile.school_size_typology || "Standard"} />
-                                        <DataItem label="Implementing Unit" value={fullProfile.profile.implementing_unit || "No"} />
+                                        <DataItem label="Implementing Unit" value={fullProfile.profile.implementing_unit == '1' || fullProfile.profile.implementing_unit === 1 ? "Yes" : "No"} />
                                     </InfoCard>
                                 </div>
                             </div>
@@ -170,16 +170,16 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <InfoCard title="Teacher Inventory (Active)" icon={<Users size={16} />} color="blue">
-                                        <DataItem label="Elem Teachers" value={(fullProfile.profile.es_teachers || 0).toLocaleString()} />
-                                        <DataItem label="JHS Teachers" value={(fullProfile.profile.jhs_teachers || 0).toLocaleString()} />
-                                        <DataItem label="SHS Teachers" value={(fullProfile.profile.shs_teachers || 0).toLocaleString()} />
+                                        <DataItem label="Elem Teachers" value={Number(fullProfile.profile.es_teachers || 0).toLocaleString()} />
+                                        <DataItem label="JHS Teachers" value={Number(fullProfile.profile.jhs_teachers || 0).toLocaleString()} />
+                                        <DataItem label="SHS Teachers" value={Number(fullProfile.profile.shs_teachers || 0).toLocaleString()} />
                                         <div className="pt-2 mt-2 border-t border-blue-200">
                                             <DataItem label="Total Teachers" value={((Number(fullProfile.profile.es_teachers) || 0) + (Number(fullProfile.profile.jhs_teachers) || 0) + (Number(fullProfile.profile.shs_teachers) || 0)).toLocaleString()} />
                                         </div>
                                     </InfoCard>
                                     <InfoCard title="Resource Gap Analysis" icon={<AlertCircle size={16} />} color="red">
-                                        <DataItem label="Total Shortage" value={(fullProfile.profile.total_shortage || 0).toLocaleString()} />
-                                        <DataItem label="Total Excess" value={(fullProfile.profile.total_excess || 0).toLocaleString()} />
+                                        <DataItem label="Total Shortage" value={Number(fullProfile.profile.total_shortage || 0).toLocaleString()} />
+                                        <DataItem label="Total Excess" value={Number(fullProfile.profile.total_excess || 0).toLocaleString()} />
                                         <div className="pt-2 mt-2 border-t border-red-200">
                                             <DataItem label="Net Requirement" value={(Number(fullProfile.profile.total_shortage || 0) - Number(fullProfile.profile.total_excess || 0)).toLocaleString()} />
                                         </div>
@@ -201,14 +201,14 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <InfoCard title="Rooms & Buildings" icon={<Building size={16} />} color="orange">
-                                        <DataItem label="Total Buildings" value={(Number(fullProfile.profile.buildings) || 0).toLocaleString()} />
-                                        <DataItem label="Total Classrooms" value={(Number(fullProfile.profile.instructional_rooms_2023_2024) || 0).toLocaleString()} />
-                                        <DataItem label="Major Repairs" value={(Number(fullProfile.profile.major_repair_2023_2024) || 0).toLocaleString()} />
+                                        <DataItem label="Total Buildings" value={Number(fullProfile.profile.buildings || 0).toLocaleString()} />
+                                        <DataItem label="Total Classrooms" value={Number(fullProfile.profile.instructional_rooms_2023_2024 || 0).toLocaleString()} />
+                                        <DataItem label="Major Repairs" value={Number(fullProfile.profile.major_repair_2023_2024 || 0).toLocaleString()} />
                                     </InfoCard>
                                     <InfoCard title="Facility Gaps" icon={<AlertTriangle size={16} />} color="orange">
-                                        <DataItem label="Classroom Requirement" value={(fullProfile.profile.classroom_requirement || 0).toLocaleString()} />
-                                        <DataItem label="Classroom Shortage" value={(fullProfile.profile.est_cs || 0).toLocaleString()} />
-                                        <DataItem label="Buildable Space" value={fullProfile.profile.buidable_space === '1' || fullProfile.profile.buidable_space === 1 ? "Yes" : "No"} />
+                                        <DataItem label="Classroom Requirement" value={Number(fullProfile.profile.classroom_requirement || 0).toLocaleString()} />
+                                        <DataItem label="Classroom Shortage" value={Number(fullProfile.profile.est_cs || 0).toLocaleString()} />
+                                        <DataItem label="Buildable Space" value={fullProfile.profile.buidable_space == '1' || fullProfile.profile.buidable_space === 1 ? "Yes" : "No"} />
                                     </InfoCard>
                                     <InfoCard title="Utilities & Logistics" icon={<Settings2 size={16} />} color="blue">
                                         <DataItem label="Electricity Source" value={fullProfile.profile.electricitysource || "N/A"} />
@@ -245,7 +245,7 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                         ].map(spec => (
                                             <div key={spec.label} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center shadow-sm hover:border-blue-200 transition-colors">
                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{spec.label}</span>
-                                                <span className="text-lg font-black text-[#003366]">{(fullProfile.profile[spec.field] || 0).toLocaleString()}</span>
+                                                <span className="text-lg font-black text-[#003366]">{Number(fullProfile.profile[spec.field] || 0).toLocaleString()}</span>
                                             </div>
                                         ))}
                                     </div>

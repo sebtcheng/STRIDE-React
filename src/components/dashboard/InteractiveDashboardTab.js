@@ -65,6 +65,49 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
             });
     }, [filters.global_trigger, filters.selected_metrics, filters.drillLevel, filters.region, filters.division, filters.municipality, filters.legislative_district, divisionGrouping]);
 
+    // Handle Report Generation Trigger
+    useEffect(() => {
+        if (filters.report_trigger && dashboardBlocks.length > 0) {
+            const generateReport = async () => {
+                const { generateHTMLReport } = await import("@/lib/reportGenerator");
+                const subtitle = `Focus: ${filters.drillLevel} - ${filters[filters.drillLevel.toLowerCase()] || filters.region || 'National'}`;
+
+                const charts = dashboardBlocks.map(block => ({
+                    title: block.title,
+                    data: [{
+                        y: block.data.labels,
+                        x: block.data.values,
+                        type: 'bar',
+                        orientation: 'h',
+                        marker: {
+                            color: block.type === 'categorical' ? '#FFB81C' : '#0066CC',
+                            opacity: 0.95
+                        }
+                    }],
+                    layout: {
+                        yaxis: { autorange: 'reversed', automargin: true }
+                    }
+                }));
+
+                generateHTMLReport(
+                    "STRIDE Dashboard Report",
+                    subtitle,
+                    charts,
+                    {
+                        region: filters.region,
+                        division: filters.division,
+                        drill_level: filters.drillLevel,
+                        filters: {
+                            metrics: filters.selected_metrics,
+                            ...filters.categoricalFilters
+                        }
+                    }
+                );
+            };
+            generateReport();
+        }
+    }, [filters.report_trigger]);
+
     const filtersRef = useRef(filters);
     useEffect(() => {
         filtersRef.current = filters;

@@ -225,8 +225,14 @@ export default function DataExplorerTab({ filters }) {
                         <button onClick={downloadCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#003366] text-white rounded-lg text-xs hover:bg-[#002244] transition-all font-bold shadow-md">
                             <Download size={12} /> CSV
                         </button>
-                        {['Excel', 'PDF', 'Print'].map(type => (
-                            <button key={type} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold">
+                        <button
+                            onClick={() => window.print()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold"
+                        >
+                            <Download size={12} /> PRINT
+                        </button>
+                        {['Excel', 'PDF'].map(type => (
+                            <button key={type} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold opacity-50 cursor-not-allowed" title="Coming Soon">
                                 <Download size={12} /> {type}
                             </button>
                         ))}

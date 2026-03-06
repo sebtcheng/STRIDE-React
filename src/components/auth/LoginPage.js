@@ -121,25 +121,51 @@ export default function LoginPage() {
         }
     };
 
-    const handleSendOTP = () => {
+    const handleSendOTP = async () => {
         if (!regEmail.endsWith("@deped.gov.ph")) {
             setError("Must use a valid @deped.gov.ph email.");
             return;
         }
         setError(null);
-        setOtpSent(true);
-        setSuccess("OTP sent to your email! (Mocked: Use 123456)");
-        setTimeout(() => setSuccess(null), 3000);
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: regEmail })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
+
+            setOtpSent(true);
+            setSuccess("OTP sent to your email! Please check your inbox or spam folder.");
+            setTimeout(() => setSuccess(null), 5000);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleVerifyOTP = () => {
-        if (otpInput === '123456') {
+    const handleVerifyOTP = async () => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: regEmail, otp_code: otpInput })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Invalid OTP code.');
+
             setOtpVerified(true);
-            setSuccess("OTP Verified successfully!");
+            setSuccess("Email successfully verified!");
             setTimeout(() => setSuccess(null), 3000);
-            setError(null);
-        } else {
-            setError("Invalid OTP code.");
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -184,7 +210,7 @@ export default function LoginPage() {
                 userData.school = regSchool;
             }
 
-            await registerWithEmail(regEmail, regPassword, userData);
+            await registerWithEmail(regEmail, regPassword, otpInput, userData);
         } catch (err) {
             setError(err.message || "Registration failed.");
         } finally {
@@ -271,7 +297,7 @@ export default function LoginPage() {
 
                             {/* Forms */}
                             {authMode === 'deped' ? (
-                                <form onSubmit={handleDepedLogin} className="space-y-5">
+                                <form onSubmit={handleDepedLogin} className="space-y-6">
                                     <div className="space-y-1 group">
                                         <label className="text-sm font-medium text-gray-700">Email Address</label>
                                         <div className="relative">
@@ -313,18 +339,18 @@ export default function LoginPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pb-2">
+                                    <div className="flex items-center justify-between pb-4">
                                         <label className="flex items-center gap-2 cursor-pointer group">
                                             <input type="checkbox" className="rounded border-gray-300 text-[#003366] focus:ring-[#003366] transition duration-200" />
-                                            <span className="text-sm text-gray-600 group-hover:text-gray-900">Remember me</span>
+                                            <span className="text-sm text-gray-600 group-hover:text-gray-900 font-medium">Remember me</span>
                                         </label>
-                                        <a href="#" className="text-sm font-semibold text-[#003366] hover:text-blue-800 transition-colors">Forgot password?</a>
+                                        <a href="#" className="text-sm font-semibold text-[#003366] hover:text-[#004f9e] transition-colors">Forgot password?</a>
                                     </div>
 
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] text-white py-3 px-4 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
+                                        className="w-full flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] text-white py-3.5 px-4 rounded-lg font-bold transition-all shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
                                     >
                                         {loading ? "Signing in..." : "Sign In"} <ArrowRight size={18} />
                                     </button>
@@ -340,7 +366,7 @@ export default function LoginPage() {
                                     </div>
                                 </form>
                             ) : (
-                                <form onSubmit={handleGuestLogin} className="space-y-5">
+                                <form onSubmit={handleGuestLogin} className="space-y-6">
                                     <div className="space-y-1 group">
                                         <label className="text-sm font-medium text-gray-700">Full Name</label>
                                         <div className="relative">
@@ -405,7 +431,7 @@ export default function LoginPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-[#e0a800] text-[#003366] py-3 px-4 rounded-lg font-bold transition-all shadow-md hover:shadow-lg mt-4 active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
+                                        className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-[#e0a800] text-[#003366] py-3.5 px-4 rounded-lg font-bold transition-all shadow-md hover:shadow-lg mt-6 active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
                                     >
                                         {loading ? "Entering..." : "Enter Dashboard"} <ArrowRight size={18} />
                                     </button>
@@ -419,7 +445,7 @@ export default function LoginPage() {
                                 <p className="text-gray-500 text-sm">Join the DepEd STRIDE ecosystem. STRICTLY DepEd Accounts.</p>
                             </div>
 
-                            <form className="space-y-5" onSubmit={handleRegister}>
+                            <form className="space-y-6" onSubmit={handleRegister}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     {/* Column 1: Core Details */}
                                     <div className="space-y-4">
@@ -468,8 +494,8 @@ export default function LoginPage() {
                                                     required
                                                     value={regOfficeName}
                                                     onChange={e => setRegOfficeName(e.target.value)}
-                                                    placeholder="Bureau of Learner Support Services"
-                                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent outline-none transition-all text-sm"
+                                                    placeholder="e.g. BHROD-SED"
+                                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent outline-none transition-all text-gray-900 bg-gray-50 focus:bg-white text-sm font-medium"
                                                 />
                                             </div>
                                         )}
@@ -481,22 +507,14 @@ export default function LoginPage() {
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#003366]">
                                                     <Briefcase size={16} />
                                                 </div>
-                                                <select
+                                                <input
+                                                    type="text"
                                                     value={regPosition}
                                                     onChange={e => setRegPosition(e.target.value)}
                                                     required
-                                                    className="w-full pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent outline-none transition-all text-gray-900 bg-gray-50 focus:bg-white text-sm cursor-pointer"
-                                                >
-                                                    <option value="" disabled>Select Position</option>
-                                                    <option value="Teacher I">Teacher I</option>
-                                                    <option value="School Principal I">School Principal I</option>
-                                                    <option value="Engineer II">Engineer II</option>
-                                                    <option value="Engineer III">Engineer III</option>
-                                                    <option value="Engineer IV">Engineer IV</option>
-                                                    <option value="Engineer V">Engineer V</option>
-                                                    <option value="Human Resources Management Officer I">HR Management Officer I</option>
-                                                    <option value="Others (COS)">Others (COS)</option>
-                                                </select>
+                                                    placeholder="e.g. School Principal I"
+                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent outline-none transition-all text-gray-900 bg-gray-50 focus:bg-white text-sm"
+                                                />
                                             </div>
                                         </div>
 

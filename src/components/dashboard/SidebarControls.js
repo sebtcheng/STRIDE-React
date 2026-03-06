@@ -380,7 +380,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                         {/* C. Action Controls */}
                         <section className="pt-4 border-t border-gray-100 space-y-3">
-                            <button className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all">
+                            <button
+                                onClick={() => setFilters({ report_trigger: Date.now() })}
+                                className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                            >
                                 <FileDown size={16} /> GENERATE REPORT
                             </button>
 
@@ -432,6 +435,15 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                 handleMetricToggle={handlePositionToggle}
                                 selectedKey="selected_positions"
                             />
+
+                            <div className="pt-4 border-t border-gray-100 mt-6">
+                                <button
+                                    onClick={() => setFilters({ report_trigger: Date.now() })}
+                                    className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                                >
+                                    <FileDown size={16} /> GENERATE REPORT
+                                </button>
+                            </div>
                         </div>
                     </section>
                 )}
@@ -466,6 +478,15 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             handleMetricToggle={(val) => handleGenericMultiToggle("infra_categories", val)}
                             selectedKey="infra_categories"
                         />
+
+                        <div className="pt-4 border-t border-gray-100 mt-6">
+                            <button
+                                onClick={() => setFilters({ report_trigger: Date.now() })}
+                                className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                            >
+                                <FileDown size={16} /> GENERATE REPORT
+                            </button>
+                        </div>
                     </section>
                 )}
 

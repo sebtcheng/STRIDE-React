@@ -179,16 +179,6 @@ export default function DashboardPage() {
         { id: "search", label: "Quick Search", type: "standalone" },
         { id: "resource_mapping", label: "Resource Mapping", type: "standalone" },
         {
-            id: "menu-cloud",
-            label: "CLOUD",
-            type: "dropdown",
-            children: [
-                { id: "cloud_regional", label: "CLOUD (Regional Profile)" },
-                { id: "cloud_sdo", label: "CLOUD (SDO Breakdown)" },
-                { id: "cloud_multi", label: "CLOUD (Multi-variable)" }
-            ]
-        },
-        {
             id: "menu-data-explorer",
             label: "Data Explorer",
             type: "dropdown",

@@ -67,6 +67,65 @@ export default function InfrastructureTab({ filters }) {
             });
     }, [filters, latestClickKey]);
 
+    // Handle Report Generation Trigger
+    useEffect(() => {
+        if (filters.report_trigger && infraData.yearlyData) {
+            const generateReport = async () => {
+                const { generateHTMLReport } = await import("@/lib/reportGenerator");
+                const subtitle = `Infrastructure Analysis - ${filters.infra_regions?.join(', ') || 'National'}`;
+
+                const charts = [
+                    {
+                        title: "Total Allocation by Category",
+                        data: allocationTraces.filter(t => t.y.some(v => v > 0)).map(t => ({
+                            ...t,
+                            x: t.y, // Swap x and y for horizontal
+                            y: t.x,
+                            orientation: 'h'
+                        })),
+                        layout: { barmode: 'stack', yaxis: { autorange: 'reversed' } }
+                    },
+                    {
+                        title: "Allocation Trends",
+                        data: trendTraces.filter(t => t.y.some(v => v > 0)).map(t => ({
+                            ...t,
+                            x: t.y,
+                            y: t.x,
+                            orientation: 'h'
+                        })),
+                        layout: { yaxis: { autorange: 'reversed' } }
+                    },
+                    {
+                        title: "Average Completion Rate",
+                        data: completionTraces.filter(t => t.y.some(v => v > 0)).map(t => ({
+                            ...t,
+                            x: t.y,
+                            y: t.x,
+                            orientation: 'h'
+                        })),
+                        layout: { barmode: 'group', yaxis: { autorange: 'reversed' }, xaxis: { title: 'Completion %' } }
+                    }
+                ];
+
+                generateHTMLReport(
+                    "Infrastructure Dashboard Report",
+                    subtitle,
+                    charts,
+                    {
+                        drill_level: "Infrastructure Dashboard",
+                        regions: filters.infra_regions,
+                        divisions: filters.infra_divisions,
+                        filters: {
+                            categories: filters.infra_categories,
+                            summary: infraData.summary
+                        }
+                    }
+                );
+            };
+            generateReport();
+        }
+    }, [filters.report_trigger]);
+
     const handleChartClick = (e, chartType) => {
         if (e.points && e.points.length > 0) {
             const point = e.points[0];
