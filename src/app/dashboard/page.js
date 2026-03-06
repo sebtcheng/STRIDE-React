@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import SidebarControls from "@/components/dashboard/SidebarControls";
 import InteractiveDashboardTab from "@/components/dashboard/InteractiveDashboardTab";
 import SchoolLocatorTab from "@/components/dashboard/SchoolLocatorTab";
@@ -60,8 +61,28 @@ const initialFilters = {
 };
 
 export default function DashboardPage() {
-    const [activeTab, setActiveTab] = useState("interactive");
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "interactive");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Watch for url query parameter changes and update the active tab
+    useEffect(() => {
+        const tab = searchParams.get("tab");
+        if (tab && tab !== activeTab) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
+
+    const handleTabChange = (newTabId) => {
+        if (newTabId === "home") {
+            router.push('/');
+            return;
+        }
+        setActiveTab(newTabId);
+        // Shallow update URL
+        router.push(`/dashboard?tab=${newTabId}`, { scroll: false });
+    };
 
     // 2. Tab-Scoped Filter Engine
     const [tabFilters, setTabFilters] = useState({});
@@ -143,6 +164,7 @@ export default function DashboardPage() {
     };
 
     const navigation = [
+        { id: "home", label: "Home", type: "standalone" },
         {
             id: "menu-dashboard",
             label: "Dashboard",
@@ -183,7 +205,7 @@ export default function DashboardPage() {
                 toggleDrawer={() => setIsDrawerOpen(true)}
                 navigation={navigation}
                 activeTab={activeTab}
-                onTabChange={setActiveTab}
+                onTabChange={handleTabChange}
             />
             <HelpDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 

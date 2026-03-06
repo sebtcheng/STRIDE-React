@@ -7,13 +7,14 @@ export async function GET(request) {
 
         const positions = searchParams.getAll('positions'); // Array of selected positions
         const region = searchParams.get('region');
+        const division = searchParams.get('division');
 
         if (!positions || positions.length === 0) {
-            return NextResponse.json({ status: "success", data: { positionsData: [], groupingLevel: region ? 'Division' : 'Region', regionContext: region } });
+            return NextResponse.json({ status: "success", data: { positionsData: [], groupingLevel: division ? 'Division' : (region ? 'Division' : 'Region'), regionContext: region, divisionContext: division } });
         }
 
-        const groupingKey = region ? 'gmis_division' : 'gmis_region';
-        const displayKey = region ? 'Division' : 'Region'; // What frontend expects
+        const groupingKey = division ? 'gmis_division' : (region ? 'gmis_division' : 'gmis_region');
+        const displayKey = division ? 'Division' : (region ? 'Division' : 'Region'); // What frontend expects
         const results = [];
 
         for (const pos of positions) {
@@ -29,8 +30,13 @@ export async function GET(request) {
             const params = [pos];
 
             if (region) {
-                query += ` AND gmis_region = $2`;
+                query += ` AND gmis_region = $${params.length + 1}`;
                 params.push(region);
+            }
+
+            if (division) {
+                query += ` AND gmis_division = $${params.length + 1}`;
+                params.push(division);
             }
 
             query += ` GROUP BY ${groupingKey} ORDER BY SUM(total_filled + total_unfilled) DESC`;

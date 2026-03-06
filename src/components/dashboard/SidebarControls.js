@@ -398,38 +398,41 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                 {/* 1C. Plantilla Positions */}
                 {activeTab === "plantilla" && (
-                    <section>
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Position Presets</h3>
-                        <div className="space-y-2 mb-6">
-                            {plantillaFoci.map((p) => (
-                                <label key={p.name} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors border ${filters.plantilla_preset === p.name ? 'bg-blue-50 border-blue-200 text-[#003366]' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
-                                    <input
-                                        type="radio"
-                                        name="plantillaPreset"
-                                        checked={filters.plantilla_preset === p.name}
-                                        onChange={() => handlePlantillaPresetToggle(p.name)}
-                                        className="w-4 h-4 text-[#003366] border-gray-300 focus:ring-[#003366] bg-white cursor-pointer"
-                                    />
-                                    <span className="text-sm font-bold">{p.name}</span>
-                                </label>
-                            ))}
-                        </div>
+                    <section className="space-y-6">
 
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between items-center">
-                            Specific Positions
-                            {(filters.selected_positions || []).length > 0 && !filters.plantilla_preset && (
-                                <button onClick={() => setFilters({ selected_positions: [] })} className="text-[9px] text-red-500 hover:underline">Clear</button>
-                            )}
-                        </h3>
-                        <MultiSelectDropdown
-                            title="Select Plantilla Items"
-                            groups={[{ group: "Positions", options: dbSchema.gmisPositions.map(p => ({ id: p, label: p })) }]}
-                            isOpen={openDropdown === "plantilla_positions"}
-                            onToggle={() => setOpenDropdown(openDropdown === "plantilla_positions" ? null : "plantilla_positions")}
-                            filters={filters}
-                            handleMetricToggle={handlePositionToggle}
-                            selectedKey="selected_positions"
-                        />
+                        <div className="border-t border-gray-100 pt-4">
+                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Position Presets</h3>
+                            <div className="space-y-2 mb-6">
+                                {plantillaFoci.map((p) => (
+                                    <label key={p.name} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors border ${filters.plantilla_preset === p.name ? 'bg-blue-50 border-blue-200 text-[#003366]' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                                        <input
+                                            type="radio"
+                                            name="plantillaPreset"
+                                            checked={filters.plantilla_preset === p.name}
+                                            onChange={() => handlePlantillaPresetToggle(p.name)}
+                                            className="w-4 h-4 text-[#003366] border-gray-300 focus:ring-[#003366] bg-white cursor-pointer"
+                                        />
+                                        <span className="text-sm font-bold">{p.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between items-center">
+                                Specific Positions
+                                {(filters.selected_positions || []).length > 0 && !filters.plantilla_preset && (
+                                    <button onClick={() => setFilters({ selected_positions: [] })} className="text-[9px] text-red-500 hover:underline">Clear</button>
+                                )}
+                            </h3>
+                            <MultiSelectDropdown
+                                title="Select Plantilla Items"
+                                groups={[{ group: "Positions", options: dbSchema.gmisPositions.map(p => ({ id: p, label: p })) }]}
+                                isOpen={openDropdown === "plantilla_positions"}
+                                onToggle={() => setOpenDropdown(openDropdown === "plantilla_positions" ? null : "plantilla_positions")}
+                                filters={filters}
+                                handleMetricToggle={handlePositionToggle}
+                                selectedKey="selected_positions"
+                            />
+                        </div>
                     </section>
                 )}
 
@@ -884,36 +887,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
             </div>
 
-            {/* Bottom Global Action Area */}
-            <div className="p-5 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-10 flex flex-col gap-3">
-                <button className="w-full group flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow-sm text-xs">
-                    <FileDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
-                    Generate Intelligence Report
-                </button>
-                <button onClick={() => {
-                    if (activeTab === "plantilla") {
-                        const url = new URL(window.location.origin + "/api/plantilla-data/report");
-                        if (filters.drillLevel === "Region" || filters.drillLevel === "Division" || filters.drillLevel === "DistrictGroup") {
-                            if (filters.region && filters.region !== "All Regions") {
-                                url.searchParams.append("region", filters.region);
-                            }
-                        }
-                        const selected = filters.selected_positions || [];
-                        if (selected.length === 0) {
-                            alert("Please select at least one position to export.");
-                            return;
-                        }
-                        selected.forEach(pos => url.searchParams.append("positions", pos));
-                        window.open(url.toString(), "_blank");
-                    } else {
-                        alert("Export functionality is currently customized per module. Please try another tab.");
-                    }
-                }}
-                    className="w-full group flex items-center justify-center gap-2 bg-[#CE1126] hover:bg-red-800 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md text-sm">
-                    <Download size={18} className="group-hover:animate-bounce" />
-                    Export Current View
-                </button>
-            </div>
+
         </aside>
     );
 }

@@ -443,14 +443,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                 loadingProfile={loadingProfile}
             />
 
-            <div className="mt-6 flex gap-4">
-                {(filters.aa_variables || []).map((v, i) => (
-                    <div key={i} className="bg-white px-4 py-2 border border-blue-100 border-l-4 border-l-[#003366] rounded shadow-sm text-xs font-bold text-gray-700">
-                        {v.column.toUpperCase()}
-                        {v.min !== undefined ? ` [${v.min} - ${v.max}]` : ` [${(v.values || []).length} choices]`}
-                    </div>
-                ))}
-            </div>
+
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {

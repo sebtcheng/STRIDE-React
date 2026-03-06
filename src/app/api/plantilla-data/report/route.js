@@ -7,13 +7,14 @@ export async function GET(request) {
 
         const positions = searchParams.getAll('positions');
         const region = searchParams.get('region');
+        const division = searchParams.get('division');
 
         if (!positions || positions.length === 0) {
             return new NextResponse("No positions selected for export.", { status: 400 });
         }
 
-        const groupingKey = region ? 'gmis_division' : 'gmis_region';
-        const displayKey = region ? 'Division' : 'Region';
+        const groupingKey = division ? 'gmis_division' : (region ? 'gmis_division' : 'gmis_region');
+        const displayKey = division ? 'Division' : (region ? 'Division' : 'Region');
 
         let query = `
             SELECT ${groupingKey} AS group_name, SUM(total_filled) AS filled, SUM(total_unfilled) AS unfilled
@@ -23,8 +24,13 @@ export async function GET(request) {
         const params = [positions];
 
         if (region) {
-            query += ` AND gmis_region = $2`;
+            query += ` AND gmis_region = $${params.length + 1}`;
             params.push(region);
+        }
+
+        if (division) {
+            query += ` AND gmis_division = $${params.length + 1}`;
+            params.push(division);
         }
 
         query += ` GROUP BY ${groupingKey} ORDER BY SUM(total_filled + total_unfilled) DESC`;

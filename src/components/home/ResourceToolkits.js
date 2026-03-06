@@ -1,57 +1,55 @@
 "use client";
 
-import { FileText, Database, Briefcase, ExternalLink } from "lucide-react";
-
 export default function ResourceToolkits() {
     const toolkits = [
         {
-            title: "ECP System Guide",
-            description: "Educational Facilities Profile operational rules.",
-            icon: <Database className="w-5 h-5 text-[#003366]" />
+            title: "ECP System Toolkit",
+            description: "An implementation guide for teachers on navigating the Educational Facilities Profile, understanding core metrics, and streamlining data encoding efficiency.",
+            image: "/img/ecp.png"
         },
         {
-            title: "SIIF Architecture",
-            description: "School Infrastructure Information Facility mapping.",
-            icon: <Briefcase className="w-5 h-5 text-[#003366]" />
+            title: "SIIF Toolkit",
+            description: "A comprehensive manual for School Infrastructure Information Facility charting, spatial analysis, and reporting standards for DepEd facilities.",
+            image: "/img/siif.png"
         },
         {
-            title: "Teacher Workload",
-            description: "Guidelines on resolving parameter limits.",
-            icon: <FileText className="w-5 h-5 text-[#003366]" />
+            title: "Teacher Workload Toolkit",
+            description: "Strategic guidelines for mapping teacher workloads, assessing instructional capabilities, and resolving deployment imbalances across divisions.",
+            image: "/img/teacher.png"
         }
     ];
 
     return (
-        <section className="bg-gray-50 py-16 border-t border-gray-200">
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="mb-8 flex items-end justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold text-[#003366]">Resource Toolkits</h2>
-                        <p className="text-gray-500 text-sm mt-1">Official references for STRIDE data processing</p>
-                    </div>
-                    <button className="text-sm font-medium text-[#CE1126] hover:underline flex items-center gap-1 hidden sm:flex">
-                        View All Resources <ExternalLink size={14} />
-                    </button>
-                </div>
+        <section className="py-12 w-full max-w-7xl mx-auto px-4 mb-20 section-resource">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-extrabold text-[#003366]">Resources & Toolkits</h2>
+                <div className="h-1 w-24 bg-[#FFB81C] mx-auto mt-4 rounded-full"></div>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {toolkits.map((card, idx) => (
-                        <div
-                            key={idx}
-                            className="group flex flex-col justify-between bg-white p-5 rounded-lg border border-gray-200 shadow-sm hover:border-[#FFB81C] hover:shadow-md transition-all cursor-pointer"
-                        >
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-[#FFB81C]/20 transition-colors">
-                                    {card.icon}
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 group-hover:text-[#003366] transition-colors">{card.title}</h3>
-                                    <p className="text-xs text-gray-500 mt-1">{card.description}</p>
-                                </div>
-                            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {toolkits.map((card, idx) => (
+                    <div
+                        key={idx}
+                        className="flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-xl transition-shadow duration-300 group"
+                    >
+                        <div className="h-48 w-full relative overflow-hidden bg-gray-100 flex items-center justify-center p-4">
+                            <img
+                                src={card.image}
+                                alt={card.title}
+                                className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-t-lg drop-shadow-md"
+                                onError={(e) => { e.target.src = 'https://placehold.co/600x400/e0e0e0/ffffff?text=Graphic' }}
+                            />
                         </div>
-                    ))}
-                </div>
+                        <div className="p-6 flex flex-col flex-1 border-t border-gray-50">
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">{card.title}</h3>
+                            <p className="text-gray-600 text-sm flex-1 leading-relaxed mb-6">{card.description}</p>
+
+                            <button className="w-full bg-[#003366] text-white font-semibold py-3 rounded-lg transition-colors border border-transparent hover:bg-[#FFB81C] hover:text-[#003366] hover:border-[#e0a800]">
+                                Learn More
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
         </section>
     );

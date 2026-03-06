@@ -1,9 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db, googleProvider } from "@/lib/firebase";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -13,75 +10,129 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                // Enforce deped.gov.ph domain
-                if (!currentUser.email.endsWith("@deped.gov.ph")) {
-                    await signOut(auth);
-                    setUser(null);
-                    setRole(null);
-                    setLoading(false);
-                    alert("Unauthorized: Only @deped.gov.ph emails are allowed.");
-                    return;
-                }
-
-                try {
-                    // Fetch or create user document
-                    const userRef = doc(db, "users", currentUser.uid);
-                    const userDoc = await getDoc(userRef);
-
-                    let userRole = "structural"; // default role for authenticated deped users
-                    if (!userDoc.exists()) {
-                        await setDoc(userRef, {
-                            email: currentUser.email,
-                            displayName: currentUser.displayName,
-                            role: "structural",
-                            createdAt: new Date().toISOString()
-                        });
+        const fetchUser = async () => {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user) {
+                        setUser(data.user);
+                        setRole(data.user.role || 'structural');
                     } else {
-                        userRole = userDoc.data().role || "structural";
+                        setUser(null);
+                        setRole(null);
                     }
-
-                    setUser(currentUser);
-                    setRole(userRole);
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
                 }
-            } else {
-                setUser(null);
-                setRole(null);
+            } catch (error) {
+                console.error("Error fetching user session:", error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
-        });
+        };
 
-        return () => unsubscribe();
+        fetchUser();
     }, []);
 
-    const loginWithGoogle = async () => {
+    const loginWithEmail = async (email, password) => {
+        if (!email.toLowerCase().endsWith("@deped.gov.ph")) {
+            throw new Error("Unauthorized: Only @deped.gov.ph emails are allowed.");
+        }
+
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || "Login failed.");
+        }
+
+        setUser(data.user);
+        setRole(data.user.role || 'structural');
+        return data.user;
+    };
+
+    const registerWithEmail = async (email, password, userData) => {
+        if (!email.toLowerCase().endsWith("@deped.gov.ph")) {
+            throw new Error("Unauthorized: Only @deped.gov.ph emails are allowed.");
+        }
+
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, ...userData })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || "Registration failed.");
+        }
+
+        setUser(data.user);
+        setRole(data.user.role || 'structural');
+        return data.user;
+    };
+
+    const loginAsGuest = async (guestData) => {
+        // guestData: { name, email, organization, purpose }
+        if (!guestData.name || !guestData.email) {
+            throw new Error("Name and Email are required for Guest Login.");
+        }
+
+        console.log("Starting Guest Login for:", guestData.email);
+
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            if (!result.user.email.endsWith("@deped.gov.ph")) {
-                await signOut(auth);
-                alert("Unauthorized: Only @deped.gov.ph emails are allowed.");
+            // Save to Azure SQL via API
+            const azureResponse = await fetch('/api/auth/guest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(guestData)
+            });
+
+            if (!azureResponse.ok) {
+                const errorData = await azureResponse.json();
+                console.warn("Azure SQL Guest Save failed:", errorData);
+                throw new Error("Guest login failed at the server.");
+            } else {
+                console.log("Azure SQL Guest Save successful.");
             }
+
+            // Authenticate temporarily in app context
+            const userState = { email: guestData.email, displayName: guestData.name, first_name: guestData.name, role: 'guest' };
+            setUser(userState);
+            setRole("guest");
+
+            return true;
         } catch (error) {
-            console.error("Login failed:", error);
+            console.error("Guest login process failed:", error);
+            throw error;
         }
     };
 
-    const loginAsGuest = () => {
-        setUser({ email: "guest@guest.com", displayName: "Guest User" });
-        setRole("guest");
-    };
-
-    const logout = () => {
-        signOut(auth);
-        setUser(null);
-        setRole(null);
+    const logout = async () => {
+        try {
+            // If they are a standard user, clear the session cookie
+            if (role !== "guest") {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            }
+        } catch (err) {
+            console.error("Logout error:", err);
+        } finally {
+            setUser(null);
+            setRole(null);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, role, loading, loginWithGoogle, loginAsGuest, logout }}>
+        <AuthContext.Provider value={{
+            user, role, loading,
+            loginWithEmail, registerWithEmail,
+            loginAsGuest, logout
+        }}>
             {children}
         </AuthContext.Provider>
     );

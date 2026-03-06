@@ -20,6 +20,9 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
             if (filters.region && filters.region !== "All Regions") {
                 url.searchParams.append("region", filters.region);
             }
+            if (filters.division) {
+                url.searchParams.append("division", filters.division);
+            }
         }
 
         const selected = filters.selected_positions || [];
@@ -44,11 +47,11 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
                 console.error("Error fetching plantilla data:", err);
                 setData(prev => ({ ...prev, loading: false }));
             });
-    }, [filters.region, filters.selected_positions, filters.drillLevel]);
+    }, [filters.region, filters.division, filters.selected_positions, filters.drillLevel]);
 
-    const handleChartClick = (e, groupingLevel) => {
-        if (!e.points || e.points.length === 0) return;
-        const clickedName = e.points[0].label; // The y-axis label
+    const handleChartClick = (name, groupingLevel) => {
+        if (!name) return;
+        const clickedName = String(name).trim();
 
         if (groupingLevel === "Region") {
             drillDown("Region", clickedName, "region");
@@ -94,7 +97,7 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
                         key={idx}
                         posData={posData}
                         groupingLevel={data.groupingLevel}
-                        onChartClick={(e) => handleChartClick(e, data.groupingLevel)}
+                        onChartClick={(name) => handleChartClick(name, data.groupingLevel)}
                     />
                 ))}
             </div>
@@ -160,7 +163,42 @@ function PositionCard({ posData, groupingLevel, onChartClick }) {
                     ))}
                 </div>
 
-                <div className="w-full relative" style={{ height: `${maxChartHeight}px` }}>
+                <div
+                    className="w-full relative overflow-y-auto pr-1"
+                    style={{ height: `${maxChartHeight}px`, pointerEvents: 'auto', cursor: 'pointer' }}
+                    onClickCapture={(e) => {
+                        let clickedName = window._hoveredPoint;
+
+                        // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
+                        if (!clickedName) {
+                            try {
+                                const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
+                                if (plotContainer) {
+                                    const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
+                                    const sortedLabels = [...posData.chartData.groupings].sort((a, b) => b.length - a.length);
+
+                                    for (let i = 0; i < hoverLayers.length; i++) {
+                                        const text = hoverLayers[i].textContent;
+                                        for (const label of sortedLabels) {
+                                            if (text.includes(label)) {
+                                                clickedName = label;
+                                                break;
+                                            }
+                                        }
+                                        if (clickedName) break;
+                                    }
+                                }
+                            } catch (err) {
+                                console.error("Error reading fallback tooltip:", err);
+                            }
+                        }
+
+                        if (clickedName) {
+                            window._hoveredPoint = null;
+                            onChartClick(clickedName);
+                        }
+                    }}
+                >
                     <Plot
                         data={chartConfig}
                         layout={{
@@ -173,11 +211,25 @@ function PositionCard({ posData, groupingLevel, onChartClick }) {
                             paper_bgcolor: 'transparent',
                             plot_bgcolor: 'transparent',
                             showlegend: true,
-                            legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' }
+                            legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+                            dragmode: false,
+                            hovermode: 'closest'
                         }}
                         useResizeHandler
                         className="w-full h-full"
-                        onClick={onChartClick}
+                        config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                        onHover={(event) => {
+                            if (event.points && event.points.length > 0) {
+                                if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                            }
+                        }}
+                        onUnhover={() => {
+                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                            window._hoverTimer = setTimeout(() => {
+                                window._hoveredPoint = null;
+                            }, 500);
+                        }}
                     />
                 </div>
             </div>
