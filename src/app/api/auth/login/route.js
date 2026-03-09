@@ -7,7 +7,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'stride-secure-secret-key-12345';
 
 export async function POST(request) {
     try {
-        const { email, password } = await request.json();
+        let body;
+        try {
+            body = await request.json();
+        } catch (e) {
+            return NextResponse.json({ error: 'Malformed request: Missing body.' }, { status: 400 });
+        }
+
+        const { email, password } = body || {};
 
         if (!email || !password) {
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
