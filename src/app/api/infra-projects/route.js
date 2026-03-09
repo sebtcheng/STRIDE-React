@@ -23,16 +23,19 @@ export async function POST(request) {
             params.push(divisions);
         }
         if (categories.length > 0) {
-            whereClause += ` AND f.typeefd = ANY($${params.length + 1})`;
+            whereClause += ` AND f.category = ANY($${params.length + 1})`;
             params.push(categories);
         }
+
+        // Limit to 2030 per user request
+        whereClause += ` AND f.fundingyear <= 2030`;
 
         // Drilldown (Click Interaction) Filters
         if (clickKey) {
             const { year, category, chartType } = clickKey;
 
             if (category) {
-                whereClause += ` AND f.typeefd = $${params.length + 1}`;
+                whereClause += ` AND f.category = $${params.length + 1}`;
                 params.push(category);
             }
 
@@ -52,14 +55,14 @@ export async function POST(request) {
 
         const sql = `
             SELECT 
-                f.id,
                 s.region,
                 s.division,
                 s.schoolname,
                 s.schoolid,
                 f.fundingyear as year,
-                COALESCE(f.typeefd, 'Uncategorized') as category,
+                COALESCE(f.category, 'Uncategorized') as category,
                 CAST(f.allocation AS NUMERIC) as allocation,
+                f.completion as completion_rate,
                 f.status as completion_status
             FROM fact_efd_masterlist f
             LEFT JOIN dim_schools s ON f.schoolid = s.schoolid

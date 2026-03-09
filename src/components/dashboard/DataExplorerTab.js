@@ -3,10 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import DataTable from "react-data-table-component";
 import { Search, Database, Download } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DataExplorerTab({ filters }) {
     const [data, setData] = useState({ rows: [], totalMatched: 0, loading: true });
     const [columnFilters, setColumnFilters] = useState({});
+    const { role } = useAuth();
 
     // Client-side filtering logic
     const filteredResults = useMemo(() => {
@@ -222,12 +224,19 @@ export default function DataExplorerTab({ filters }) {
                         {filteredResults.length.toLocaleString()} Schools Visible
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={downloadCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#003366] text-white rounded-lg text-xs hover:bg-[#002244] transition-all font-bold shadow-md">
+                        <button
+                            onClick={downloadCSV}
+                            disabled={role === 'guest'}
+                            title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Download CSV Document"}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all font-bold shadow-md ${role === 'guest' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#003366] text-white hover:bg-[#002244]'}`}
+                        >
                             <Download size={12} /> CSV
                         </button>
                         <button
                             onClick={() => window.print()}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold"
+                            disabled={role === 'guest'}
+                            title={role === 'guest' ? "Printing is disabled for Guest accounts" : "Print Data Explorer view"}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-all font-bold ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-white hover:shadow-md'}`}
                         >
                             <Download size={12} /> PRINT
                         </button>

@@ -6,9 +6,9 @@ export async function POST(request) {
         const { name, email, organization, purpose } = await request.json();
 
         // Validate basic requirements
-        if (!name || !email) {
+        if (!name || !email || !organization || !purpose) {
             return NextResponse.json(
-                { error: 'Name and Email are required.' },
+                { error: 'Name, Email, Affiliation, and Purpose are required for access.' },
                 { status: 400 }
             );
         }

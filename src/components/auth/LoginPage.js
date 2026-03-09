@@ -227,20 +227,16 @@ export default function LoginPage() {
                     {/* Integrated Branding Block */}
                     <div className="flex flex-col items-center">
                         {/* Logos Container */}
-                        <div className="flex flex-col items-start -ml-12 sm:-ml-16 mb-0 relative">
-                            {/* DepEd Header Logo */}
-                            <img src="/img/logo1.png" alt="DepEd Logo" className="h-12 sm:h-14 w-auto absolute -top-1 sm:-top-2 left-10 sm:left-14 drop-shadow-sm z-10" />
-
-                            {/* Main STRIDE Logo */}
-                            <img src="/img/Stridelogo1.png" alt="STRIDE" className="h-40 sm:h-48 w-auto drop-shadow-lg hover:scale-105 transition-transform duration-500 relative z-0 mt-8 sm:mt-10" />
+                        <div className="flex flex-col items-center mb-0 relative">
+                            {/* Official STRIDE Logo */}
+                            <img src="/img/Stride_official_logo.png" alt="STRIDE" className="h-80 sm:h-96 w-auto drop-shadow-xl hover:scale-105 transition-transform duration-500 relative z-0 mt-4" />
                         </div>
 
-                        {/* Taglines */}
-                        <h2 className="text-3xl md:text-4xl font-bold italic mb-1 text-[#d19c11] tracking-tight drop-shadow-sm mt-0 sm:-mt-2">
+                        <h2 className="text-4xl md:text-5xl font-bold italic mb-2 text-[#d19c11] tracking-tight drop-shadow-sm mt-1 sm:mt-0">
                             Education in Motion!
                         </h2>
 
-                        <p className="text-xl md:text-2xl font-bold tracking-tight">
+                        <p className="text-2xl md:text-3xl font-bold tracking-tight">
                             <span className="text-[#003366]">Data Precision. </span>
                             <span className="text-[#CE1126]">Smart Decision.</span>
                         </p>
@@ -402,13 +398,14 @@ export default function LoginPage() {
                                     </div>
 
                                     <div className="space-y-1 group">
-                                        <label className="text-sm font-medium text-gray-700">Organization / Affiliation</label>
+                                        <label className="text-sm font-medium text-gray-700">Organization / Affiliation *</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#e0a800]">
                                                 <Building size={18} />
                                             </div>
                                             <input
                                                 type="text"
+                                                required
                                                 value={guestOrg}
                                                 onChange={e => setGuestOrg(e.target.value)}
                                                 placeholder="University or Company"
@@ -418,9 +415,10 @@ export default function LoginPage() {
                                     </div>
 
                                     <div className="space-y-1">
-                                        <label className="text-sm font-medium text-gray-700">Purpose of Access</label>
+                                        <label className="text-sm font-medium text-gray-700">Purpose of Access *</label>
                                         <textarea
                                             rows="3"
+                                            required
                                             value={guestPurpose}
                                             onChange={e => setGuestPurpose(e.target.value)}
                                             placeholder="Briefly state your purpose..."

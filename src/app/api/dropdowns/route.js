@@ -4,38 +4,65 @@ import pool from '@/lib/db';
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
-        const region = searchParams.get('region');
-        const division = searchParams.get('division');
+        const regionStr = searchParams.get('region');
+        const regionsStr = searchParams.get('regions'); // Comma-separated
+        const divisionStr = searchParams.get('division');
+        const divisionsStr = searchParams.get('divisions'); // Comma-separated
+
+        // Handle single or multiple combinations
+        let activeRegions = [];
+        if (regionsStr) activeRegions = regionsStr.split(',').filter(Boolean);
+        else if (regionStr) activeRegions = [regionStr];
+
+        let activeDivisions = [];
+        if (divisionsStr) activeDivisions = divisionsStr.split(',').filter(Boolean);
+        else if (divisionStr) activeDivisions = [divisionStr];
 
         // Fetch unique values from dim_schools
         let divQuery = 'SELECT DISTINCT division FROM dim_schools WHERE division IS NOT NULL';
         const divParams = [];
-        if (region) { divQuery += ' AND region = $1'; divParams.push(region); }
+        if (activeRegions.length > 0) {
+            divQuery += ' AND region = ANY($1)';
+            divParams.push(activeRegions);
+        }
         divQuery += ' ORDER BY division';
 
         let distQuery = 'SELECT DISTINCT district FROM dim_schools WHERE district IS NOT NULL';
         const distParams = [];
-        if (region) { distQuery += ' AND region = $1'; distParams.push(region); }
-        if (division) { distQuery += ` AND division = $${distParams.length + 1}`; distParams.push(division); }
+        if (activeRegions.length > 0) {
+            distQuery += ' AND region = ANY($1)';
+            distParams.push(activeRegions);
+        }
+        if (activeDivisions.length > 0) {
+            distQuery += ` AND division = ANY($${distParams.length + 1})`;
+            distParams.push(activeDivisions);
+        }
         distQuery += ' ORDER BY district';
 
         let munQuery = 'SELECT DISTINCT municipality FROM dim_schools WHERE municipality IS NOT NULL';
         const munParams = [];
-        if (region) { munQuery += ' AND region = $1'; munParams.push(region); }
-        if (division) { munQuery += ` AND division = $${munParams.length + 1}`; munParams.push(division); }
+        if (activeRegions.length > 0) {
+            munQuery += ' AND region = ANY($1)';
+            munParams.push(activeRegions);
+        }
+        if (activeDivisions.length > 0) {
+            munQuery += ` AND division = ANY($${munParams.length + 1})`;
+            munParams.push(activeDivisions);
+        }
         munQuery += ' ORDER BY municipality';
 
         // Fetch legislative districts from raw_school_unique_v2
         let legDistQuery = 'SELECT DISTINCT legislative_district FROM raw_school_unique_v2 WHERE legislative_district IS NOT NULL';
         const legDistParams = [];
-        if (region) {
-            // we use ILIKE or standard matching, wait. 'raw_school_unique_v2' has old_region / region confusion.
-            legDistQuery += " AND (region = $1 OR old_region = $1 OR region ILIKE '%' || $1 || '%')";
-            legDistParams.push(region);
+        if (activeRegions.length > 0) {
+            // Because of old_region / region mismatch matching strings... Using regex/ANY for simplicity
+            // For array match we just use identical match for now to simplify
+            legDistQuery += " AND (region = ANY($1) OR old_region = ANY($1))";
+            legDistParams.push(activeRegions);
         }
-        if (division) {
-            legDistQuery += ` AND division = $${legDistParams.length + 1}`;
-            legDistParams.push(division);
+        if (activeDivisions.length > 0) {
+            legDistQuery += ` AND division = ANY($${legDistParams.length + 1})`;
+            legDistParams.push(activeDivisions);
         }
         legDistQuery += ' ORDER BY legislative_district';
 

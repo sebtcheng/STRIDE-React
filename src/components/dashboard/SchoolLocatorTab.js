@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
-import { Search, MapPin, X, Info } from "lucide-react";
+import { Search, MapPin, X, Info, Loader2 } from "lucide-react";
 import SchoolProfileModal from "./SchoolProfileModal";
 
 // Dynamically load the Leaflet wrapper to prevent SSR issues and React 18 piecemeal DOM chunking bugs
@@ -162,7 +162,15 @@ export default function SchoolLocatorTab({ filters }) {
                             columns={columns}
                             data={filteredSchools}
                             progressPending={loading}
-                            progressComponent={<div className="p-4 text-[#003366] font-bold animate-pulse">Fetching Schools...</div>}
+                            progressComponent={
+                                <div className="p-10 flex flex-col items-center justify-center gap-2">
+                                    <div className="relative">
+                                        <Loader2 className="w-8 h-8 text-[#003366] animate-spin" />
+                                        <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse"></div>
+                                    </div>
+                                    <span className="text-[10px] font-black text-[#003366] mt-2 uppercase tracking-widest opacity-60">Synchronizing...</span>
+                                </div>
+                            }
                             pagination
                             fixedHeader
                             paginationPerPage={10}

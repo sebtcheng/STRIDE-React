@@ -79,13 +79,18 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                         x: block.data.values,
                         type: 'bar',
                         orientation: 'h',
+                        text: block.data.values.map(v => v.toLocaleString()),
+                        textposition: 'outside',
+                        cliponaxis: false,
+                        textfont: { color: '#003366', size: 10 },
                         marker: {
                             color: block.type === 'categorical' ? '#FFB81C' : '#0066CC',
                             opacity: 0.95
                         }
                     }],
                     layout: {
-                        yaxis: { autorange: 'reversed', automargin: true }
+                        yaxis: { autorange: 'reversed', automargin: true },
+                        margin: { r: 100 }
                     }
                 }));
 
@@ -310,7 +315,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                         layout={{
                                                             ...layoutStyling,
                                                             transition: { duration: 750, easing: 'cubic-in-out' },
-                                                            margin: { t: 5, r: 60, b: 25, l: 15 },
+                                                            margin: { t: 5, r: 80, b: 25, l: 15 }, // Increased R margin for labels
                                                             dragmode: false,
                                                             hovermode: 'closest',
                                                             xaxis: {
@@ -443,7 +448,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                                     layout={{
                                                         ...layoutStyling,
                                                         transition: { duration: 750, easing: 'cubic-in-out' },
-                                                        margin: { t: 20, r: 100, b: 40, l: 30 },
+                                                        margin: { t: 20, r: 120, b: 40, l: 30 }, // Increased R margin for labels
                                                         dragmode: false,
                                                         hovermode: 'closest',
                                                         xaxis: {

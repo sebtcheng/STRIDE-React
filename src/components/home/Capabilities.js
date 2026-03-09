@@ -35,7 +35,8 @@ export default function Capabilities() {
                 {capabilities.map((item, index) => (
                     <div
                         key={index}
-                        className="bg-white rounded-2xl p-8 border border-gray-100 flex flex-col items-center text-center shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:-translate-y-2 hover:shadow-[0_12px_30px_rgb(0,0,0,0.1)] transition-all duration-300 group"
+                        className={`bg-white rounded-2xl p-8 border border-gray-100 flex flex-col items-center text-center shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:-translate-y-2 hover:shadow-[0_12px_30px_rgb(0,0,0,0.1)] transition-all duration-300 group animate-slide-up`}
+                        style={{ animationDelay: `${(index + 1) * 200}ms` }}
                     >
                         <div className={`p-4 rounded-full ${item.bgColor} mb-6 shadow-md group-hover:scale-110 transition-transform duration-300`}>
                             {item.icon}

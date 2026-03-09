@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Filter, Settings2, Search, Users, Home, Building, CheckSquare, AlertTriangle, Download, ListChecks, ArrowLeft, FileDown, MapPin } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
-const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleMetricToggle, selectedKey = "selected_metrics" }) => {
+const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleMetricToggle, onSelectAll, selectedKey = "selected_metrics" }) => {
     const selectedArray = filters?.[selectedKey] || [];
+    const allOptions = groups.flatMap(g => g.options.map(o => o.id));
+    const isAllSelected = allOptions.length > 0 && allOptions.every(id => selectedArray.includes(id));
     const selectedCount = groups.flatMap(g => g.options).filter(o => selectedArray.includes(o.id)).length;
 
     return (
@@ -18,6 +21,19 @@ const MultiSelectDropdown = ({ title, groups, isOpen, onToggle, filters, handleM
             </button>
             {isOpen && (
                 <div className="absolute z-50 mt-2 w-full min-w-[280px] bg-white border border-[#003366] shadow-2xl rounded-lg max-h-80 overflow-y-auto left-0 origin-top overflow-x-hidden">
+                    <div className="p-2 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 sticky top-0 z-10 backdrop-blur-sm">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onSelectAll) {
+                                    onSelectAll(isAllSelected ? [] : allOptions);
+                                }
+                            }}
+                            className="text-[10px] font-black text-[#003366] hover:text-[#CE1126] transition-colors flex items-center gap-1 px-1"
+                        >
+                            <ListChecks size={12} /> {isAllSelected ? "DESELECT ALL" : "SELECT ALL"}
+                        </button>
+                    </div>
                     {groups.map((group, idx) => (
                         <div key={idx} className="border-b border-gray-100 last:border-b-0">
                             <div className="bg-[#f0f4f8] text-[10px] font-black uppercase tracking-widest text-[#003366] px-3 py-2 border-b border-[#dce6f1]">
@@ -64,6 +80,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
     const [resourceMappingMode, setResourceMappingMode] = useState("Standard");
     const [quickSearchAdvanced, setQuickSearchAdvanced] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null); // Track which dropdown is open
+    const { role } = useAuth();
 
     const [dbSchema, setDbSchema] = useState({
         uniRegions: ["Region I"],
@@ -80,8 +97,18 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
     useEffect(() => {
         // Fetch Universal App Schema
         const url = new URL(window.location.origin + "/api/dropdowns");
-        if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
-        if (filters.division) url.searchParams.append("division", filters.division);
+
+        if (activeTab === "infra") {
+            if (filters.infra_regions && filters.infra_regions.length > 0) {
+                url.searchParams.append("regions", filters.infra_regions.join(','));
+            }
+            if (filters.infra_divisions && filters.infra_divisions.length > 0) {
+                url.searchParams.append("divisions", filters.infra_divisions.join(','));
+            }
+        } else {
+            if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
+            if (filters.division) url.searchParams.append("division", filters.division);
+        }
 
         fetch(url)
             .then(res => res.json())
@@ -109,7 +136,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                 }
             })
             .catch(err => console.error("Error fetching analytics schema:", err));
-    }, [filters.region, filters.division]);
+    }, [filters.region, filters.division, filters.infra_regions, filters.infra_divisions, activeTab]);
 
     const foci = [
         { name: "Teacher Focus", icon: <Users size={18} /> },
@@ -174,6 +201,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
             current.add(metricId);
         }
         setFilters({ dashboard_preset: null, selected_metrics: Array.from(current) });
+    };
+
+    const handleMetricSelectAll = (allIds) => {
+        setFilters({ dashboard_preset: null, selected_metrics: allIds });
     };
 
     const handlePlantillaPresetToggle = (presetName) => {
@@ -285,6 +316,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
         setFilters({ selected_positions: Array.from(current), plantilla_preset: null });
     };
 
+    const handlePositionSelectAll = (allIds) => {
+        setFilters({ selected_positions: allIds, plantilla_preset: null });
+    };
+
     const handleGenericMultiToggle = (key, val) => {
         const current = new Set(filters[key] || []);
         if (current.has(val)) {
@@ -298,6 +333,14 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
             setFilters({ [key]: Array.from(current), infra_divisions: [] });
         } else {
             setFilters({ [key]: Array.from(current) });
+        }
+    };
+
+    const handleGenericSelectAll = (key, allOptions) => {
+        if (key === 'infra_regions') {
+            setFilters({ [key]: allOptions, infra_divisions: [] });
+        } else {
+            setFilters({ [key]: allOptions });
         }
     };
 
@@ -374,6 +417,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                     onToggle={() => setOpenDropdown(openDropdown === title ? null : title)}
                                     filters={filters}
                                     handleMetricToggle={handleMetricToggle}
+                                    onSelectAll={handleMetricSelectAll}
                                 />
                             ))}
                         </section>
@@ -381,8 +425,10 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                         {/* C. Action Controls */}
                         <section className="pt-4 border-t border-gray-100 space-y-3">
                             <button
+                                disabled={role === 'guest'}
+                                title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Generate Dashboard Report"}
                                 onClick={() => setFilters({ report_trigger: Date.now() })}
-                                className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                                className={`w-full flex items-center justify-center gap-2 font-black py-3 px-4 rounded-xl shadow border text-xs transition-all ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] border-yellow-600/20'}`}
                             >
                                 <FileDown size={16} /> GENERATE REPORT
                             </button>
@@ -433,13 +479,16 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                 onToggle={() => setOpenDropdown(openDropdown === "plantilla_positions" ? null : "plantilla_positions")}
                                 filters={filters}
                                 handleMetricToggle={handlePositionToggle}
+                                onSelectAll={handlePositionSelectAll}
                                 selectedKey="selected_positions"
                             />
 
                             <div className="pt-4 border-t border-gray-100 mt-6">
                                 <button
+                                    disabled={role === 'guest'}
+                                    title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Generate Plantilla Report"}
                                     onClick={() => setFilters({ report_trigger: Date.now() })}
-                                    className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                                    className={`w-full flex items-center justify-center gap-2 font-black py-3 px-4 rounded-xl shadow border text-xs transition-all ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] border-yellow-600/20'}`}
                                 >
                                     <FileDown size={16} /> GENERATE REPORT
                                 </button>
@@ -458,6 +507,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             onToggle={() => setOpenDropdown(openDropdown === "infra_regions" ? null : "infra_regions")}
                             filters={filters}
                             handleMetricToggle={(val) => handleGenericMultiToggle("infra_regions", val)}
+                            onSelectAll={(all) => handleGenericSelectAll("infra_regions", all)}
                             selectedKey="infra_regions"
                         />
                         <MultiSelectDropdown
@@ -467,6 +517,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             onToggle={() => setOpenDropdown(openDropdown === "infra_divisions" ? null : "infra_divisions")}
                             filters={filters}
                             handleMetricToggle={(val) => handleGenericMultiToggle("infra_divisions", val)}
+                            onSelectAll={(all) => handleGenericSelectAll("infra_divisions", all)}
                             selectedKey="infra_divisions"
                         />
                         <MultiSelectDropdown
@@ -476,13 +527,16 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             onToggle={() => setOpenDropdown(openDropdown === "infra_categories" ? null : "infra_categories")}
                             filters={filters}
                             handleMetricToggle={(val) => handleGenericMultiToggle("infra_categories", val)}
+                            onSelectAll={(all) => handleGenericSelectAll("infra_categories", all)}
                             selectedKey="infra_categories"
                         />
 
                         <div className="pt-4 border-t border-gray-100 mt-6">
                             <button
+                                disabled={role === 'guest'}
+                                title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Generate Infrastructure Report"}
                                 onClick={() => setFilters({ report_trigger: Date.now() })}
-                                className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-yellow-500 text-[#003366] font-black py-3 px-4 rounded-xl shadow border border-yellow-600/20 text-xs transition-all"
+                                className={`w-full flex items-center justify-center gap-2 font-black py-3 px-4 rounded-xl shadow border text-xs transition-all ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-[#CE1126] hover:bg-red-800 text-white border-red-900/20'}`}
                             >
                                 <FileDown size={16} /> GENERATE REPORT
                             </button>

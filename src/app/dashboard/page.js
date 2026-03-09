@@ -16,6 +16,7 @@ import CloudRegionalTab from "@/components/dashboard/CloudRegionalTab";
 import CloudSDOTab from "@/components/dashboard/CloudSDOTab";
 import CloudMultiTab from "@/components/dashboard/CloudMultiTab";
 import DataExplorerTab from "@/components/dashboard/DataExplorerTab";
+import ContactUsTab from "@/components/dashboard/ContactUsTab";
 
 import Navbar from "@/components/layout/Navbar";
 import HelpDrawer from "@/components/layout/HelpDrawer";
@@ -178,15 +179,7 @@ export default function DashboardPage() {
         },
         { id: "search", label: "Quick Search", type: "standalone" },
         { id: "resource_mapping", label: "Resource Mapping", type: "standalone" },
-        {
-            id: "menu-data-explorer",
-            label: "Data Explorer",
-            type: "dropdown",
-            restricted: true,
-            children: [
-                { id: "data_explorer", label: "Information Database" }
-            ]
-        }
+        { id: "data_explorer", label: "Data Explorer", type: "standalone", restricted: true }
     ];
 
     return (
@@ -201,29 +194,34 @@ export default function DashboardPage() {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sticky Sidebar Controls - Hub for all Tab Inputs */}
-                <SidebarControls
-                    activeTab={activeTab}
-                    filters={filters}
-                    setFilters={updateFilters}
-                    drillDown={applyDrillDown}
-                    goBack={rollbackLevel}
-                />
+                {activeTab !== "contact" && (
+                    <SidebarControls
+                        activeTab={activeTab}
+                        filters={filters}
+                        setFilters={updateFilters}
+                        drillDown={applyDrillDown}
+                        goBack={rollbackLevel}
+                    />
+                )}
 
                 {/* Main View Area - Data Display Only */}
                 <main className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
                     <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white">
-                        {activeTab === "interactive" && <InteractiveDashboardTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                        {activeTab === "locator" && <SchoolLocatorTab filters={filters} />}
-                        {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                        {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                        {activeTab === "infra" && <InfrastructureTab filters={filters} />}
-                        {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
-                        {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} setFilters={updateFilters} />}
-                        {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
-                        {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
-                        {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}
-                        {activeTab === "data_explorer" && <DataExplorerTab filters={filters} />}
-                        {activeTab === "input" && <DataInputTab filters={filters} />}
+                        <div key={activeTab} className="animate-tab-enter flex flex-col h-full w-full">
+                            {activeTab === "interactive" && <InteractiveDashboardTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
+                            {activeTab === "locator" && <SchoolLocatorTab filters={filters} />}
+                            {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
+                            {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
+                            {activeTab === "infra" && <InfrastructureTab filters={filters} />}
+                            {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
+                            {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} setFilters={updateFilters} />}
+                            {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
+                            {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
+                            {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}
+                            {activeTab === "data_explorer" && <DataExplorerTab filters={filters} />}
+                            {activeTab === "contact" && <ContactUsTab />}
+                            {activeTab === "input" && <DataInputTab filters={filters} />}
+                        </div>
                     </div>
                 </main>
             </div>

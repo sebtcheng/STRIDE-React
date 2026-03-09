@@ -8,6 +8,7 @@ import HeroBanner from "@/components/home/HeroBanner";
 import ImageCarousel from "@/components/home/ImageCarousel";
 import Capabilities from "@/components/home/Capabilities";
 import ResourceToolkits from "@/components/home/ResourceToolkits";
+import Footer from "@/components/layout/Footer";
 
 export default function HomeDashboard() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -28,25 +29,7 @@ export default function HomeDashboard() {
         },
         { id: "search", label: "Quick Search", type: "standalone" },
         { id: "resource_mapping", label: "Resource Mapping", type: "standalone" },
-        {
-            id: "menu-cloud",
-            label: "CLOUD",
-            type: "dropdown",
-            children: [
-                { id: "cloud_regional", label: "CLOUD (Regional Profile)" },
-                { id: "cloud_sdo", label: "CLOUD (SDO Breakdown)" },
-                { id: "cloud_multi", label: "CLOUD (Multi-variable)" }
-            ]
-        },
-        {
-            id: "menu-data-explorer",
-            label: "Data Explorer",
-            type: "dropdown",
-            restricted: true,
-            children: [
-                { id: "data_explorer", label: "Information Database" }
-            ]
-        }
+        { id: "data_explorer", label: "Data Explorer", type: "standalone", restricted: true }
     ];
 
     const handleTabChange = (tabId) => {
@@ -77,6 +60,7 @@ export default function HomeDashboard() {
                     <ResourceToolkits />
                 </div>
             </main>
+            <Footer onHelpClick={() => setIsDrawerOpen(true)} />
         </div>
     );
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { X, Download, Building2, MapPin, Users, AlertCircle, Building, AlertTriangle, Settings2, CheckSquare, Info, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const InfoCard = ({ title, icon, children, color = "blue" }) => {
     const colors = {
@@ -33,6 +34,7 @@ const DataItem = ({ label, value, subValue }) => (
 );
 
 export default function SchoolProfileModal({ isOpen, onClose, school, fullProfile, loadingProfile }) {
+    const { role } = useAuth();
     // ESC Key Listener for Modal
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -76,10 +78,12 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                         </div>
                         <div className="flex items-center gap-3">
                             <button
+                                disabled={role === 'guest'}
+                                title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Export School Profile to PDF"}
                                 onClick={() => {
                                     window.open(`/api/quick-search/export-profile?schoolId=${school.id}`, '_blank');
                                 }}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 border border-white/10 backdrop-blur-sm transition-all"
+                                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 border border-white/10 backdrop-blur-sm transition-all ${role === 'guest' ? 'bg-white/5 text-white/50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'}`}
                             >
                                 <Download size={14} /> EXPORT PDF
                             </button>

@@ -22,9 +22,12 @@ export async function POST(request) {
             params.push(divisions);
         }
         if (categories.length > 0) {
-            whereClause += ` AND f.typeefd = ANY($${params.length + 1})`;
+            whereClause += ` AND f.category = ANY($${params.length + 1})`;
             params.push(categories);
         }
+
+        // Limit to 2030 per user request
+        whereClause += ` AND f.fundingyear <= 2030`;
 
         // We want to fetch everything we need for all 4 charts at once:
         // 1. Total Allocations per Year per Category
@@ -33,15 +36,15 @@ export async function POST(request) {
         const sql = `
             SELECT 
                 f.fundingyear as year,
-                COALESCE(f.typeefd, 'Uncategorized') as category,
+                COALESCE(f.category, 'Uncategorized') as category,
                 SUM(CAST(f.allocation AS NUMERIC)) as total_allocation,
                 COUNT(f.schoolid) as total_projects,
                 SUM(CASE WHEN f.status ILIKE '%complet%' THEN 1 ELSE 0 END)::NUMERIC / NULLIF(COUNT(f.schoolid), 0) as avg_completion
             FROM fact_efd_masterlist f
             LEFT JOIN (SELECT DISTINCT ON (schoolid) * FROM dim_schools) s ON f.schoolid = s.schoolid
             WHERE ${whereClause}
-            GROUP BY f.fundingyear, f.typeefd
-            ORDER BY f.fundingyear ASC, f.typeefd ASC
+            GROUP BY f.fundingyear, f.category
+            ORDER BY f.fundingyear ASC, f.category ASC
         `;
 
         const result = await pool.query(sql, params);

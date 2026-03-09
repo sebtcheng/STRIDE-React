@@ -46,11 +46,6 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
         <nav className="bg-white text-gray-800 shadow-sm border-b-4 border-[#003366] sticky top-0 z-50 flex items-center justify-between px-4 py-2" ref={navRef}>
             {/* Left Branding Area */}
             <div className="flex items-center gap-4 shrink-0 h-full">
-                <img
-                    src="/img/deped_logo.png"
-                    alt="DepEd Logo"
-                    className="w-10 h-10 object-contain"
-                />
                 <div className="flex flex-col justify-center">
                     <div className="flex items-center font-black italic tracking-tighter text-4xl cursor-default select-none group leading-none">
                         <span className="text-[#003366]">STR</span>
@@ -86,21 +81,25 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                                 const isOpen = openDropdown === navItem.id;
 
                                 return (
-                                    <div key={navItem.id} className="relative group shrink-0 mt-1">
+                                    <div
+                                        key={navItem.id}
+                                        className="relative group shrink-0 mt-1"
+                                        onMouseEnter={() => setOpenDropdown(navItem.id)}
+                                        onMouseLeave={() => setOpenDropdown(null)}
+                                    >
                                         <button
-                                            onClick={() => setOpenDropdown(isOpen ? null : navItem.id)}
-                                            className={`flex items-center gap-1.5 px-1 py-1 text-[13px] font-bold transition-all border-b-2 ${isChildActive
+                                            className={`flex items-center gap-1.5 px-1 py-1 text-[13px] font-bold transition-all duration-300 border-b-2 ${isChildActive
                                                 ? "border-gray-800 text-gray-900"
                                                 : "border-transparent text-gray-600 hover:text-gray-800"
                                                 }`}
                                         >
                                             {getIconForTab(navItem.id)}
                                             {navItem.label}
-                                            <svg className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""} text-gray-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                                            <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180" : ""} text-gray-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                                         </button>
 
                                         {isOpen && (
-                                            <div className="absolute top-full left-0 mt-2 flex flex-col bg-white text-gray-800 shadow-lg rounded-md min-w-[220px] border border-gray-100 z-50 overflow-hidden shrink-0">
+                                            <div className="absolute top-full left-0 mt-2 flex flex-col bg-white text-gray-800 shadow-lg rounded-md min-w-[220px] border border-gray-100 z-50 overflow-hidden shrink-0 animate-slide-down">
                                                 {navItem.children.map(child => (
                                                     <button
                                                         key={child.id}
@@ -108,7 +107,7 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                                                             onTabChange(child.id);
                                                             setOpenDropdown(null);
                                                         }}
-                                                        className={`text-left px-4 py-3 text-sm font-medium transition-colors ${activeTab === child.id
+                                                        className={`text-left px-4 py-3 text-sm font-medium transition-all duration-300 ${activeTab === child.id
                                                             ? "bg-gray-50 text-[#003366] border-l-4 border-[#003366]"
                                                             : "hover:bg-gray-50 border-l-4 border-transparent text-gray-700"
                                                             }`}
@@ -130,7 +129,7 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                                         onTabChange(navItem.id);
                                         setOpenDropdown(null);
                                     }}
-                                    className={`flex items-center gap-1.5 px-1 py-1 mt-1 shrink-0 whitespace-nowrap text-[13px] font-bold transition-all border-b-2 ${activeTab === navItem.id
+                                    className={`flex items-center gap-1.5 px-1 py-1 mt-1 shrink-0 whitespace-nowrap text-[13px] font-bold transition-all duration-300 border-b-2 ${activeTab === navItem.id
                                         ? "border-gray-800 text-gray-900"
                                         : "border-transparent text-gray-600 hover:text-gray-800"
                                         }`}
@@ -142,7 +141,10 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                         })}
 
                         {/* Static Contact Us Tab */}
-                        <button className="flex items-center gap-1.5 px-1 py-1 mt-1 shrink-0 whitespace-nowrap text-[13px] font-bold transition-all border-b-2 border-transparent text-gray-600 hover:text-gray-800">
+                        <button
+                            onClick={() => onTabChange('contact')}
+                            className={`flex items-center gap-1.5 px-1 py-1 mt-1 shrink-0 whitespace-nowrap text-[13px] font-bold transition-all border-b-2 ${activeTab === 'contact' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-600 hover:text-gray-800'}`}
+                        >
                             <Mail size={16} className="text-gray-700" />
                             Contact Us
                         </button>

@@ -244,6 +244,12 @@ export default function QuickSearchTab({ filters }) {
                                 </div>
                             }
                             progressPending={loadingSearch}
+                            progressComponent={
+                                <div className="p-20 flex flex-col items-center justify-center gap-3">
+                                    <Loader2 className="w-10 h-10 text-[#003366] animate-spin opacity-20" />
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Searching Database...</span>
+                                </div>
+                            }
                             noDataComponent={<div className="p-20 text-gray-400 font-medium">Use Sidebar to filter and Search</div>}
                             conditionalRowStyles={[
                                 {

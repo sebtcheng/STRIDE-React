@@ -1,8 +1,16 @@
 "use client";
 
-import { X, PlayCircle, FileText, HelpCircle } from "lucide-react";
+import { useState } from "react";
+import { X, PlayCircle, FileText, HelpCircle, BookOpen } from "lucide-react";
 
 export default function HelpDrawer({ isOpen, onClose }) {
+    const [activeTab, setActiveTab] = useState("video");
+
+    const tabs = [
+        { id: "video", label: "Video Guide" },
+        { id: "faqs", label: "FAQs" }
+    ];
+
     return (
         <>
             {/* Backdrop overlay */}
@@ -17,75 +25,85 @@ export default function HelpDrawer({ isOpen, onClose }) {
                 className={`fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
                     }`}
             >
-                <div className="flex items-center justify-between p-4 border-b bg-gray-50 text-[#003366]">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <BookOpenIcon className="w-5 h-5 text-[#FFB81C]" />
-                        Quick Guide
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 bg-[#003366] text-white">
+                    <h2 className="text-xl font-bold flex items-center gap-3">
+                        STRIDE User Guide & Assistant
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                        className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6 text-gray-800">
+                {/* Tab Navigation */}
+                <div className="flex border-b border-gray-200 bg-white sticky top-0 z-10">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 py-4 text-xs font-bold transition-all relative ${activeTab === tab.id
+                                ? "text-[#CE1126]"
+                                : "text-gray-500 hover:text-gray-700"
+                                }`}
+                        >
+                            {tab.label}
+                            {activeTab === tab.id && (
+                                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#CE1126]" />
+                            )}
+                        </button>
+                    ))}
+                </div>
 
-                    <section>
-                        <h3 className="font-semibold text-lg border-b pb-2 mb-3 flex items-center gap-2 text-[#003366]">
-                            <HelpCircle size={18} />
-                            FAQs
-                        </h3>
-                        <div className="space-y-3 text-sm">
-                            <div>
-                                <strong className="block text-gray-900">How do I export a report?</strong>
-                                <p className="text-gray-600">Navigate to the Education Resource Dashboard and click the red "Generate Report" button on the sidebar.</p>
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto p-6 text-gray-800">
+                    {activeTab === "video" && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                            <h3 className="text-lg font-bold text-[#003366]">Video Walkthrough</h3>
+                            <div className="aspect-video w-full rounded-xl overflow-hidden border border-gray-200 shadow-md bg-black">
+                                <iframe
+                                    className="w-full h-full"
+                                    src="https://www.youtube.com/embed/TirKDX1Wwz4"
+                                    title="STRIDE Video Walkthrough"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                ></iframe>
                             </div>
-                            <div>
-                                <strong className="block text-gray-900">Can I view data by municipality?</strong>
-                                <p className="text-gray-600">Yes, the Advanced Search allows filtering down to the district and municipality level.</p>
-                            </div>
-                            <div>
-                                <strong className="block text-gray-900">What is the "Structural" role?</strong>
-                                <p className="text-gray-600">Verified @deped.gov.ph users who have access to strategic internal metrics.</p>
+                            <p className="text-sm text-gray-500 leading-relaxed italic">
+                                Watch this guide to learn how to navigate the STRIDE platform and maximize its analytical tools.
+                            </p>
+                        </div>
+                    )}
+
+                    {activeTab === "faqs" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                            <h3 className="text-lg font-bold text-[#003366] border-b pb-2 flex items-center gap-2">
+                                <HelpCircle size={18} /> FAQs
+                            </h3>
+                            <div className="space-y-5">
+                                <div className="group">
+                                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-[#CE1126] transition-colors mb-1">How do I export a report?</h4>
+                                    <p className="text-xs text-gray-500 leading-relaxed">Navigate to any dashboard and click the green or red "Generate Report" button on the sidebar to download as PDF or XLS.</p>
+                                </div>
+                                <div className="group">
+                                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-[#CE1126] transition-colors mb-1">Can I view data by municipality?</h4>
+                                    <p className="text-xs text-gray-500 leading-relaxed">Yes, the Quick Search/Locator tab allows filtering down to the district and municipality level.</p>
+                                </div>
+                                <div className="group">
+                                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-[#CE1126] transition-colors mb-1">What is the "Structural" role?</h4>
+                                    <p className="text-xs text-gray-500 leading-relaxed">Verified @deped.gov.ph users who have access to strategic internal metrics and deployment logs.</p>
+                                </div>
                             </div>
                         </div>
-                    </section>
+                    )}
+                </div>
 
-                    <section>
-                        <h3 className="font-semibold text-lg border-b pb-2 mb-3 flex items-center gap-2 text-[#003366]">
-                            <PlayCircle size={18} />
-                            Tutorial Videos
-                        </h3>
-                        <div className="space-y-2">
-                            <button className="w-full text-left p-3 rounded bg-gray-50 hover:bg-blue-50 border border-gray-100 transition-colors text-sm font-medium flex justify-between items-center group">
-                                Dashboard Overview
-                                <PlayCircle size={16} className="text-[#FFB81C] group-hover:scale-110 transition-transform" />
-                            </button>
-                            <button className="w-full text-left p-3 rounded bg-gray-50 hover:bg-blue-50 border border-gray-100 transition-colors text-sm font-medium flex justify-between items-center group">
-                                Using the Geospatial Map
-                                <PlayCircle size={16} className="text-[#FFB81C] group-hover:scale-110 transition-transform" />
-                            </button>
-                            <button className="w-full text-left p-3 rounded bg-gray-50 hover:bg-blue-50 border border-gray-100 transition-colors text-sm font-medium flex justify-between items-center group">
-                                HR and Plantilla Tracking
-                                <PlayCircle size={16} className="text-[#FFB81C] group-hover:scale-110 transition-transform" />
-                            </button>
-                        </div>
-                    </section>
-
-                    <section>
-                        <h3 className="font-semibold text-lg border-b pb-2 mb-3 flex items-center gap-2 text-[#003366]">
-                            <FileText size={18} />
-                            Glossary
-                        </h3>
-                        <ul className="text-sm space-y-2 text-gray-700">
-                            <li><strong className="text-gray-900 font-medium">SIIF:</strong> School Infrastructure Information Facility</li>
-                            <li><strong className="text-gray-900 font-medium">ECP:</strong> Educational Facilities Profile</li>
-                            <li><strong className="text-gray-900 font-medium">Plantilla:</strong> Official roster of authorized government positions</li>
-                        </ul>
-                    </section>
-
+                {/* Footer Attribution */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50 text-[10px] text-center text-gray-400 font-medium">
+                    © 2026 STRIDE • STRATEGIC RESOURCE INVENTORY
                 </div>
             </div>
         </>

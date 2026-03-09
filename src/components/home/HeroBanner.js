@@ -22,7 +22,7 @@ export default function HeroBanner() {
             ></div>
 
             {/* Agency Logos Row */}
-            <div className="relative z-10 flex items-center justify-center gap-6 md:gap-10 mb-8">
+            <div className="relative z-10 flex items-center justify-center gap-6 md:gap-10 mb-8 animate-fade-in">
                 {/* Logo 2 (Left) - Bagong Pilipinas */}
                 <div className="flex items-center justify-center" style={{ width: '115px', height: '115px' }}>
                     <img
@@ -53,8 +53,8 @@ export default function HeroBanner() {
 
             {/* Main Headline */}
             <h1
-                className="relative z-10 text-4xl md:text-5xl lg:text-5xl font-extrabold tracking-tight leading-[1.3] md:leading-[1.4] mb-8 max-w-5xl"
-                style={{ color: '#ffffff', fontSize: '3.3rem' }}
+                className="relative z-10 text-4xl md:text-5xl lg:text-5xl font-extrabold tracking-tight leading-[1.3] md:leading-[1.4] mb-8 max-w-5xl animate-slide-up"
+                style={{ color: '#ffffff', fontSize: '3.3rem', animationDelay: '200ms' }}
             >
                 Strategic Resource Inventory <br className="hidden md:block" />
                 <span className="inline-block mt-4">
@@ -73,8 +73,8 @@ export default function HeroBanner() {
 
             {/* Sub-headline */}
             <p
-                className="relative z-10 max-w-3xl mx-auto text-base md:text-lg lg:text-xl mt-6 mb-6 leading-loose font-medium"
-                style={{ color: 'rgba(203, 213, 225, 0.9)', fontSize: '1.375rem' }}
+                className="relative z-10 max-w-3xl mx-auto text-base md:text-lg lg:text-xl mt-6 mb-6 leading-loose font-medium animate-slide-up"
+                style={{ color: 'rgba(203, 213, 225, 0.9)', fontSize: '1.375rem', animationDelay: '400ms' }}
             >
                 Empowering DepEd with data-driven insights to strengthen education systems,{' '}
                 optimize resource allocation, and promote informed decision-making.
@@ -126,8 +126,8 @@ export default function HeroBanner() {
                 `}} />
                 <button
                     onClick={() => router.push('/dashboard?tab=interactive')}
-                    className="arcade-btn relative inline-block focus:outline-none rounded-full ring-4 ring-yellow-600/50 ring-offset-6 ring-offset-[#001b3a] transition-all hover:ring-yellow-500/70"
-                    style={{ outline: 'none' }}
+                    className="arcade-btn relative inline-block focus:outline-none rounded-full ring-4 ring-yellow-600/50 ring-offset-6 ring-offset-[#001b3a] transition-all hover:ring-yellow-500/70 animate-scale-in"
+                    style={{ outline: 'none', animationDelay: '600ms' }}
                 >
                     {/* 3D Base/Side */}
                     <span className="arcade-base absolute inset-0 rounded-full"></span>

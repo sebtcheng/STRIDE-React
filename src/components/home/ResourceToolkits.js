@@ -30,7 +30,8 @@ export default function ResourceToolkits() {
                 {toolkits.map((card, idx) => (
                     <div
                         key={idx}
-                        className="flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-xl transition-shadow duration-300 group"
+                        className="flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-xl transition-shadow duration-300 group animate-slide-up"
+                        style={{ animationDelay: `${(idx + 1) * 200 + 400}ms` }}
                     >
                         <div className="h-48 w-full relative overflow-hidden bg-gray-100 flex items-center justify-center p-4">
                             <img
@@ -41,10 +42,10 @@ export default function ResourceToolkits() {
                             />
                         </div>
                         <div className="p-6 flex flex-col flex-1 border-t border-gray-50">
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">{card.title}</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#003366] transition-colors">{card.title}</h3>
                             <p className="text-gray-600 text-sm flex-1 leading-relaxed mb-6">{card.description}</p>
 
-                            <button className="w-full bg-[#003366] text-white font-semibold py-3 rounded-lg transition-colors border border-transparent hover:bg-[#FFB81C] hover:text-[#003366] hover:border-[#e0a800]">
+                            <button className="w-full bg-[#003366] text-white font-semibold py-3 rounded-lg transition-all border border-transparent hover:bg-[#FFB81C] hover:text-[#003366] hover:border-[#e0a800] active:scale-[0.98]">
                                 Learn More
                             </button>
                         </div>
