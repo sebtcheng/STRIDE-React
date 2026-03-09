@@ -24,6 +24,7 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
     const [selectedModalSchool, setSelectedModalSchool] = useState(null);
     const [fullProfile, setFullProfile] = useState(null);
     const [loadingProfile, setLoadingProfile] = useState(false);
+    const mapRef = useRef(null);
 
     useEffect(() => {
         async function fetchSchools() {
@@ -81,18 +82,22 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        handleMarkerClick(row);
+                        if (isMobile) {
+                            setSelectedSchool(row);
+                        } else {
+                            handleMarkerClick(row);
+                        }
                     }}
                     className="p-1.5 bg-[#003366]/10 text-[#003366] rounded-full hover:bg-[#003366] hover:text-white transition-colors"
-                    title="View Full Profile"
+                    title={isMobile ? "Plot on Map" : "View Full Profile"}
                 >
-                    <Info size={16} />
+                    {isMobile ? <MapPin size={16} /> : <Info size={16} />}
                 </button>
             ),
             width: "80px",
             button: true
         }
-    ], []);
+    ], [isMobile]);
 
     // Local Search Filtering
     const filteredSchools = useMemo(() => {
@@ -109,6 +114,9 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
 
     const handleRowClick = (row) => {
         setSelectedSchool(row);
+        if (isMobile && mapRef.current) {
+            mapRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const handleMarkerClick = async (school) => {
@@ -190,7 +198,10 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
                 </div>
 
                 {/* Right Map Pane */}
-                <div className={`w-full lg:w-1/2 bg-gray-100 relative h-full transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div
+                    ref={mapRef}
+                    className={`w-full lg:w-1/2 bg-gray-100 relative h-full transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+                >
                     {error && (
                         <div className="absolute top-4 left-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
                             <strong>Error loading map data:</strong> {error}

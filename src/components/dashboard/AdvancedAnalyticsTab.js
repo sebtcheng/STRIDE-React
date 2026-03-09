@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
-import { Search, Info, MapPin, Loader2, Database, BarChart2, ArrowLeft, Download } from "lucide-react";
+import { Search, Info, MapPin, Loader2, Database, BarChart2, ArrowLeft, Download, X } from "lucide-react";
 import SchoolProfileModal from "./SchoolProfileModal";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const DynamicMap = dynamic(
     () => import('./SchoolLocatorMapInner'),
@@ -27,6 +28,9 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
     const [selectedModalSchool, setSelectedModalSchool] = useState(null);
     const [fullProfile, setFullProfile] = useState(null);
     const [loadingProfile, setLoadingProfile] = useState(false);
+    const [mapSearchText, setMapSearchText] = useState("");
+
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         const executeQuery = async () => {
@@ -274,50 +278,57 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
     return (
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden p-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <h3 className="font-bold text-[#003366] text-sm flex items-center gap-2">
+                <div className={`p-4 border-b border-gray-100 flex ${isMobile ? 'flex-col gap-4' : 'flex-row justify-between items-center'} bg-gray-50/50`}>
+                    <div className={`flex items-start gap-2 ${isMobile ? 'w-full' : ''}`}>
                         {filters.history && filters.history.length > 0 && goBack && (
                             <button
                                 onClick={goBack}
-                                className="mr-2 p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                                className="mt-0.5 p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500 shrink-0"
                                 title="Go Back"
                             >
                                 <ArrowLeft size={16} />
                             </button>
                         )}
-                        <Search size={16} />
-                        <span className="flex items-center gap-1.5 ml-1">
-                            Filtered Analytics:
-                            <span className="text-blue-600 font-black">{Number(total).toLocaleString()}</span>
-                            <span className="text-gray-300">/</span>
-                            <span className="text-gray-500">{Number(totalEntries).toLocaleString()} Total Entries</span>
-                            {totalEntries > 0 && (
-                                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase tracking-tighter shadow-sm">
-                                    {((total / totalEntries) * 100).toFixed(2)}% of Database
+                        <div className="flex flex-col">
+                            <h3 className="font-bold text-[#003366] text-xs xs:text-sm flex items-center gap-2">
+                                <Search size={isMobile ? 14 : 16} />
+                                <span>Filtered Analytics:</span>
+                            </h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-blue-600 font-black text-xl leading-none">{Number(total).toLocaleString()}</span>
+                                <span className="text-gray-300">/</span>
+                                <span className="text-gray-500 text-[9px] font-bold uppercase tracking-tight">
+                                    {Number(totalEntries).toLocaleString()} {isMobile ? "Total" : "Total Entries"}
                                 </span>
-                            )}
-                        </span>
-                    </h3>
-                    <div className="flex items-center gap-3">
+                                {totalEntries > 0 && (
+                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[8px] font-black uppercase tracking-tighter shadow-sm flex items-center transition-all ml-1">
+                                        {((total / totalEntries) * 100).toFixed(1)}% <span className="hidden xs:inline ml-1">OF DB</span>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={`flex items-center gap-2 ${isMobile ? 'justify-between border-t border-gray-100 pt-3 w-full' : ''}`}>
                         {hasQueried && !loading && results.length > 0 && (
                             <>
                                 <button
                                     onClick={downloadReport}
-                                    className="bg-gray-100 hover:bg-gray-200 text-[#003366] px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm flex items-center gap-2 font-bold text-xs transition-all"
+                                    className={`bg-white hover:bg-gray-100 text-[#003366] ${isMobile ? 'flex-1 justify-center' : 'px-3'} py-2 rounded-xl border border-gray-200 shadow-sm flex items-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all`}
                                 >
-                                    <BarChart2 size={14} /> EXPORT REPORT
+                                    <BarChart2 size={16} /> {!isMobile && "Export Report"}
                                 </button>
                                 <button
                                     onClick={downloadCSV}
-                                    className="bg-[#003366] hover:bg-[#002244] text-white px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 font-bold text-xs transition-all"
+                                    className={`bg-[#003366] hover:bg-[#002244] text-white ${isMobile ? 'flex-1 justify-center' : 'px-3'} py-2 rounded-xl shadow-md shadow-blue-900/10 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all`}
                                 >
-                                    <Download size={14} /> EXPORT CSV
+                                    <Download size={16} /> {!isMobile && "Export CSV"}
                                 </button>
                             </>
                         )}
                         {loading && (
-                            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                                <Loader2 size={12} className="animate-spin" /> Querying Dataset...
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-2 rounded-full border border-blue-100 animate-pulse">
+                                <Loader2 size={14} className="animate-spin" /> Querying...
                             </div>
                         )}
                     </div>
@@ -332,145 +343,167 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-                        {/* Tab Headers */}
-                        <div className="flex px-4 pt-4 border-b border-gray-200 gap-4 bg-white">
+                        <div className="flex px-4 pt-4 border-b border-gray-200 gap-6 bg-white shrink-0">
                             <button
                                 onClick={() => setViewMode('graph')}
-                                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${viewMode === 'graph' ? 'border-[#003366] text-[#003366]' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
+                                className={`pb-2 text-xs xs:text-sm font-black uppercase tracking-wider border-b-2 transition-all ${viewMode === 'graph' ? 'border-[#003366] text-[#003366]' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
                             >
-                                Graphical Summary View
+                                {isMobile ? "Table View" : "Graphical Summary View"}
                             </button>
                             <button
                                 onClick={() => setViewMode('table')}
-                                className={`pb-2 text-sm font-bold border-b-2 transition-colors ${viewMode === 'table' ? 'border-[#003366] text-[#003366]' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
+                                className={`pb-2 text-xs xs:text-sm font-black uppercase tracking-wider border-b-2 transition-all ${viewMode === 'table' ? 'border-[#003366] text-[#003366]' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
                             >
-                                Raw Database Table
+                                {isMobile ? "Map View" : "Raw Database Table"}
                             </button>
                         </div>
 
-                        {/* Graph Tab */}
-                        {viewMode === 'graph' && graphData && graphData.values && graphData.values.length > 0 && (
-                            <div className="flex-1 p-6 relative flex flex-col min-h-0">
-                                <div className="flex items-center gap-2 mb-4 text-[#003366]">
-                                    <BarChart2 size={20} />
-                                    <h4 className="font-black text-lg">{graphData.title}</h4>
-                                </div>
-                                <div className="mb-4 bg-blue-50 p-3 rounded text-sm text-[#003366] font-medium border border-blue-100 flex items-center gap-2">
-                                    <Info size={16} className="shrink-0" />
-                                    <span>Click on any bar representing a geographic unit to drill down and filter the dataset further.</span>
-                                </div>
-                                <div
-                                    className="flex-1 relative w-full pr-4 overflow-y-auto custom-scrollbar"
-                                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                                    onClickCapture={(e) => {
-                                        if (loading) return;
-                                        let clickedName = window._hoveredPoint;
-
-                                        // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
-                                        if (!clickedName) {
-                                            try {
-                                                const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
-                                                if (plotContainer) {
-                                                    const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
-                                                    const sortedLabels = [...(graphData.labels || [])].sort((a, b) => b.length - a.length);
-
-                                                    for (let i = 0; i < hoverLayers.length; i++) {
-                                                        const text = hoverLayers[i].textContent;
-                                                        for (const label of sortedLabels) {
-                                                            if (text.includes(label)) {
-                                                                clickedName = label;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (clickedName) break;
-                                                    }
-                                                }
-                                            } catch (err) {
-                                                console.error("Error reading fallback tooltip:", err);
-                                            }
-                                        }
-
-                                        if (clickedName && drillDown) {
-                                            window._hoveredPoint = null; // Consume it immediately
-
-                                            if (filters.municipality) {
-                                                // If already drilled down to municipality level, typically we don't drill down further geopolitically
-                                            } else if (filters.division) {
-                                                drillDown('DistrictGroup', clickedName, 'municipality');
-                                            } else if (filters.region && filters.region !== 'All Regions') {
-                                                drillDown('Division', clickedName);
-                                            } else {
-                                                drillDown('Region', clickedName);
-                                            }
-                                        }
-                                    }}
-                                >
-                                    <div style={{ height: `${Math.max(300, (graphData.values?.length || 0) * 40)}px`, position: 'relative', width: '100%' }}>
-                                        <Plot
-                                            data={[{
-                                                y: graphData.labels,
-                                                x: graphData.values,
-                                                type: 'bar',
-                                                orientation: 'h',
-                                                text: graphData.values.map(v => v.toLocaleString()),
-                                                textposition: 'outside',
-                                                insidetextanchor: 'end',
-                                                cliponaxis: false,
-                                                textfont: {
-                                                    family: 'Inter, sans-serif',
-                                                    size: 11,
-                                                    color: '#475569'
-                                                },
-                                                marker: {
-                                                    color: '#0066CC',
-                                                    opacity: 0.95
-                                                }
-                                            }]}
-                                            layout={{
-                                                font: { family: 'Inter, sans-serif', color: '#475569', size: 11 },
-                                                paper_bgcolor: 'transparent',
-                                                plot_bgcolor: 'transparent',
-                                                autosize: true,
-                                                showlegend: false,
-                                                margin: { t: 5, r: 80, b: 35, l: 20 },
-                                                hovermode: 'closest',
-                                                dragmode: false,
-                                                xaxis: {
-                                                    visible: false,
-                                                    range: [0, Math.max(...graphData.values) * 1.25]
-                                                },
-                                                yaxis: {
-                                                    autorange: 'reversed',
-                                                    automargin: true,
-                                                    tickmode: 'linear',
-                                                    dtick: 1
-                                                }
-                                            }}
-                                            config={{ displayModeBar: false, doubleClick: false, responsive: true }}
-                                            useResizeHandler={true}
-                                            style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                            onHover={(event) => {
-                                                if (event.points && event.points.length > 0) {
-                                                    if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                    window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
-                                                }
-                                            }}
-                                            onUnhover={() => {
-                                                if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
+                        {/* Tab 1 Content: Graph (Desktop) or Table (Mobile) */}
+                        {viewMode === 'graph' && (
+                            isMobile ? (
+                                <div className="flex-1 overflow-hidden flex flex-col">
+                                    <div className="flex-1 overflow-y-auto">
+                                        <DataTable
+                                            keyField="schoolid"
+                                            columns={columns}
+                                            data={filteredResults}
+                                            highlightOnHover
+                                            pointerOnHover
+                                            pagination
+                                            fixedHeader
+                                            persistTableHead
+                                            onRowClicked={handleRowClick}
+                                            progressPending={loading}
+                                            defaultSortFieldId="division"
+                                            customStyles={{
+                                                headRow: { style: { backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', minHeight: '80px' } },
+                                                rows: { style: { minHeight: '52px', '&:not(:last-child)': { borderBottom: '1px solid #f1f5f9' } } }
                                             }}
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                graphData && graphData.values && graphData.values.length > 0 && (
+                                    <div className="flex-1 p-6 relative flex flex-col min-h-0">
+                                        <div className="flex items-center gap-2 mb-4 text-[#003366]">
+                                            <BarChart2 size={20} />
+                                            <h4 className="font-black text-lg">{graphData.title}</h4>
+                                        </div>
+                                        <div className="mb-4 bg-blue-50 p-3 rounded text-sm text-[#003366] font-medium border border-blue-100 flex items-center gap-2">
+                                            <Info size={16} className="shrink-0" />
+                                            <span>Click on any bar representing a geographic unit to drill down and filter the dataset further.</span>
+                                        </div>
+                                        <div
+                                            className="flex-1 relative w-full pr-4 overflow-y-auto custom-scrollbar"
+                                            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                                            onClickCapture={(e) => {
+                                                if (loading) return;
+                                                let clickedName = window._hoveredPoint;
+
+                                                if (!clickedName) {
+                                                    try {
+                                                        const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
+                                                        if (plotContainer) {
+                                                            const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
+                                                            const sortedLabels = [...(graphData.labels || [])].sort((a, b) => b.length - a.length);
+
+                                                            for (let i = 0; i < hoverLayers.length; i++) {
+                                                                const text = hoverLayers[i].textContent;
+                                                                for (const label of sortedLabels) {
+                                                                    if (text.includes(label)) {
+                                                                        clickedName = label;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (clickedName) break;
+                                                            }
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Error reading fallback tooltip:", err);
+                                                    }
+                                                }
+
+                                                if (clickedName && drillDown) {
+                                                    window._hoveredPoint = null;
+                                                    if (filters.municipality) {
+                                                    } else if (filters.division) {
+                                                        drillDown('DistrictGroup', clickedName, 'municipality');
+                                                    } else if (filters.region && filters.region !== 'All Regions') {
+                                                        drillDown('Division', clickedName);
+                                                    } else {
+                                                        drillDown('Region', clickedName);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <div style={{ height: `${Math.max(300, (graphData.values?.length || 0) * 40)}px`, position: 'relative', width: '100%' }}>
+                                                <Plot
+                                                    data={[{
+                                                        y: graphData.labels,
+                                                        x: graphData.values,
+                                                        type: 'bar',
+                                                        orientation: 'h',
+                                                        text: graphData.values.map(v => v.toLocaleString()),
+                                                        textposition: 'outside',
+                                                        insidetextanchor: 'end',
+                                                        cliponaxis: false,
+                                                        textfont: {
+                                                            family: 'Inter, sans-serif',
+                                                            size: 11,
+                                                            color: '#475569'
+                                                        },
+                                                        marker: {
+                                                            color: '#0066CC',
+                                                            opacity: 0.95
+                                                        }
+                                                    }]}
+                                                    layout={{
+                                                        font: { family: 'Inter, sans-serif', color: '#475569', size: 11 },
+                                                        paper_bgcolor: 'transparent',
+                                                        plot_bgcolor: 'transparent',
+                                                        autosize: true,
+                                                        showlegend: false,
+                                                        margin: { t: 5, r: 80, b: 35, l: 20 },
+                                                        hovermode: 'closest',
+                                                        dragmode: false,
+                                                        xaxis: {
+                                                            visible: false,
+                                                            range: [0, Math.max(...graphData.values) * 1.25]
+                                                        },
+                                                        yaxis: {
+                                                            autorange: 'reversed',
+                                                            automargin: true,
+                                                            tickmode: 'linear',
+                                                            dtick: 1
+                                                        }
+                                                    }}
+                                                    config={{ displayModeBar: false, doubleClick: false, responsive: true }}
+                                                    useResizeHandler={true}
+                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                                                    onHover={(event) => {
+                                                        if (event.points && event.points.length > 0) {
+                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                        }
+                                                    }}
+                                                    onUnhover={() => {
+                                                        if (window._hoverTimer) clearTimeout(window._hoverTimer);
+                                                        window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            )
                         )}
 
                         {/* Table Tab */}
                         {/* Table & Map Split View */}
                         {viewMode === 'table' && (
-                            <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-                                {/* Left: Table */}
-                                <div className="w-full lg:w-1/2 flex flex-col border-r border-gray-100 min-h-0 overflow-hidden">
+                            <div className="flex-1 flex flex-col lg:flex-row min-h-0 relative">
+                                {/* Left: Table (Hidden on Mobile unless user wants it, but here we replace it with Map) */}
+                                <div className={`${isMobile ? 'hidden' : 'w-full lg:w-1/2 flex flex-col border-r border-gray-100 min-h-0 overflow-hidden'}`}>
                                     <div className="flex-1 overflow-y-auto">
                                         <DataTable
                                             keyField="schoolid"
@@ -492,14 +525,69 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                                     </div>
                                 </div>
 
-                                {/* Right: Map */}
-                                <div className="hidden lg:block lg:w-1/2 bg-gray-50 relative min-h-0 h-full">
+                                {/* Right: Map (Full screen on mobile) */}
+                                <div className={`flex-1 bg-gray-50 relative min-h-0 h-full ${isMobile ? 'flex flex-col' : 'hidden lg:block lg:w-1/2'}`}>
+                                    {/* Mobile Search Overlay */}
+                                    {isMobile && (
+                                        <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col gap-2">
+                                            <div className="relative group">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={14} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search school to zoom..."
+                                                    className="w-full pl-9 pr-4 py-2 text-xs bg-white/90 backdrop-blur border border-gray-200 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
+                                                    value={mapSearchText}
+                                                    onChange={e => setMapSearchText(e.target.value)}
+                                                />
+                                                {mapSearchText && (
+                                                    <button
+                                                        onClick={() => setMapSearchText("")}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Top 3 Results for Mobile Map Search */}
+                                            {mapSearchText && (
+                                                <div className="bg-white/95 backdrop-blur rounded-xl shadow-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
+                                                    {filteredResults
+                                                        .filter(s => s.name.toLowerCase().includes(mapSearchText.toLowerCase()) || String(s.schoolid).includes(mapSearchText))
+                                                        .slice(0, 3)
+                                                        .map(school => (
+                                                            <div
+                                                                key={school.schoolid}
+                                                                onClick={() => {
+                                                                    handleRowClick(school);
+                                                                    setMapSearchText("");
+                                                                }}
+                                                                className="p-3 hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer flex flex-col gap-0.5"
+                                                            >
+                                                                <div className="font-black text-[11px] text-[#003366] leading-tight truncate">
+                                                                    {school.name}
+                                                                </div>
+                                                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
+                                                                    ID: {school.schoolid} | {school.division}
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                    {filteredResults.filter(s => s.name.toLowerCase().includes(mapSearchText.toLowerCase()) || String(s.schoolid).includes(mapSearchText)).length === 0 && (
+                                                        <div className="p-3 text-[10px] text-gray-400 font-bold text-center italic">No schools found in current filter</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <DynamicMap
                                         selectedSchool={selectedSchool ? { ...selectedSchool, id: selectedSchool.schoolid } : null}
                                         activeSchools={mapPoints}
                                         onMarkerClick={handleMarkerClick}
                                     />
-                                    {!selectedSchool && mapPoints.length > 0 && (
+
+                                    {!selectedSchool && mapPoints.length > 0 && !isMobile && (
                                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border border-blue-100 shadow-sm text-[10px] font-bold text-[#003366] flex items-center gap-2">
                                             <MapPin size={12} /> Click a school row to center map
                                         </div>

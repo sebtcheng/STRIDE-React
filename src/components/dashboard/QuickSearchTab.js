@@ -238,7 +238,12 @@ export default function QuickSearchTab({ filters, setFilters }) {
                                 {filteredResults.slice(0, 50).map((school, i) => ( // Cap at 50 for performance
                                     <div
                                         key={school.id || i}
-                                        onClick={() => handleSelection(school, false)}
+                                        onClick={() => {
+                                            handleSelection(school, true); // true = skipModal
+                                            if (detailRef.current) {
+                                                detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }
+                                        }}
                                         className="p-4 hover:bg-blue-50 transition-colors cursor-pointer flex flex-col gap-1 active:bg-blue-100"
                                     >
                                         <div className="font-bold text-[13px] text-gray-900 leading-tight">
@@ -261,6 +266,23 @@ export default function QuickSearchTab({ filters, setFilters }) {
                                 No schools found. Try a different search.
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Map View for Mobile */}
+                <div
+                    ref={detailRef}
+                    className="p-4 pt-0 w-full"
+                >
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-80 relative">
+                        <SchoolPreviewMap
+                            lat={selectedSchool?.lat || 12.8797}
+                            lng={selectedSchool?.lng || 121.7740}
+                            name={selectedSchool?.name || "Philippines"}
+                            results={searchResults}
+                            onMarkerClick={(school) => handleSelection(school, false)}
+                            zoom={selectedSchool ? 15 : 6}
+                        />
                     </div>
                 </div>
 
