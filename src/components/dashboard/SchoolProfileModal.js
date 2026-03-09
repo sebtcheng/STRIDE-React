@@ -83,7 +83,7 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
                                 disabled={role === 'guest'}
                                 title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Export School Profile to PDF"}
                                 onClick={() => {
-                                    window.open(`/api/quick-search/export-profile?schoolId=${school.id}`, '_blank');
+                                    window.open(`/stride-api/quick-search/export-profile?schoolId=${school.id}`, '_blank');
                                 }}
                                 className={`p-2 lg:px-4 lg:py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-white/10 backdrop-blur-sm transition-all ${role === 'guest' ? 'bg-white/5 text-white/50 cursor-not-allowed' : 'bg-white/20 hover:bg-white/30 text-white shadow-inner whitespace-nowrap'}`}
                             >

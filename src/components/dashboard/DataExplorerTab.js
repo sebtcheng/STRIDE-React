@@ -104,7 +104,7 @@ export default function DataExplorerTab({ filters }) {
 
     useEffect(() => {
         setData(prev => ({ ...prev, loading: true }));
-        const fetchUrl = new URL(window.location.origin + "/api/data-explorer");
+        const fetchUrl = new URL(window.location.origin + "/stride-api/data-explorer");
         fetchUrl.searchParams.append("region", filters.region || 'All Regions');
         fetchUrl.searchParams.append("q", filters.q || '');
         // Limit removed as per user request

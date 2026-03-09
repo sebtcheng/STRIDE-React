@@ -50,7 +50,7 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
                 if (filters.municipality) params.append('municipality', filters.municipality);
                 if (filters.legislative_district) params.append('legislative_district', filters.legislative_district);
 
-                const response = await fetch(`/api/school-locator?${params.toString()}`);
+                const response = await fetch(`/stride-api/school-locator?${params.toString()}`);
                 const data = await response.json();
 
                 if (data.status === 'success') {
@@ -117,7 +117,7 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
         setLoadingProfile(true);
         setFullProfile(null);
         try {
-            const res = await fetch(`/api/school-profile/${school.id}`);
+            const res = await fetch(`/stride-api/school-profile/${school.id}`);
             const data = await res.json();
             if (data.status === "success") {
                 setFullProfile(data.data);

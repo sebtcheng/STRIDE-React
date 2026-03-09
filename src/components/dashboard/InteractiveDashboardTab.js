@@ -34,7 +34,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
 
         setLoading(true);
         setApiError(null);
-        const url = new URL(window.location.origin + "/api/dashboard-interactive");
+        const url = new URL(window.location.origin + "/stride-api/dashboard-interactive");
         if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
         if (filters.division) url.searchParams.append("division", filters.division);
         if (filters.municipality) url.searchParams.append("municipality", filters.municipality);

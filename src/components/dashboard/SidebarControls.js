@@ -96,7 +96,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
     useEffect(() => {
         // Fetch Universal App Schema
-        const url = new URL(window.location.origin + "/api/dropdowns");
+        const url = new URL(window.location.origin + "/stride-api/dropdowns");
 
         if (activeTab === "infra") {
             if (filters.infra_regions && filters.infra_regions.length > 0) {
@@ -128,7 +128,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
             .catch(err => console.error("Error piping dataset globals:", err));
 
         // Fetch Advanced Analytics Specific Schema
-        fetch('/api/analytics-schema')
+        fetch('/stride-api/analytics-schema')
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success" && res.data) {

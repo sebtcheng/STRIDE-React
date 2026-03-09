@@ -35,7 +35,7 @@ export default function InfrastructureTab({ filters }) {
 
     useEffect(() => {
         setInfraData(prev => ({ ...prev, loading: true }));
-        fetch('/api/infra-data', {
+        fetch('/stride-api/infra-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filters })
@@ -54,7 +54,7 @@ export default function InfrastructureTab({ filters }) {
 
     useEffect(() => {
         setLoadingProjects(true);
-        fetch('/api/infra-projects', {
+        fetch('/stride-api/infra-projects', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filters, clickKey: latestClickKey })

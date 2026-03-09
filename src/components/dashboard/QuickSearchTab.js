@@ -35,7 +35,7 @@ export default function QuickSearchTab({ filters, setFilters }) {
         const executeSearch = async () => {
             setLoadingSearch(true);
             try {
-                const url = new URL(window.location.origin + '/api/quick-search');
+                const url = new URL(window.location.origin + '/stride-api/quick-search');
                 if (filters.q) url.searchParams.append("q", filters.q);
                 if (filters.region && filters.region !== "All Regions") url.searchParams.append("region", filters.region);
                 if (filters.division) url.searchParams.append("division", filters.division);
@@ -185,7 +185,7 @@ export default function QuickSearchTab({ filters, setFilters }) {
         setSelectedSchool(school);
         setLoadingProfile(true);
         try {
-            const res = await fetch(`/api/school-profile/${school.id}`);
+            const res = await fetch(`/stride-api/school-profile/${school.id}`);
             const data = await res.json();
             if (data.status === "success") {
                 setFullProfile(data.data);

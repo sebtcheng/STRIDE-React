@@ -14,7 +14,7 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
     });
 
     useEffect(() => {
-        const url = new URL(window.location.origin + "/api/plantilla-data");
+        const url = new URL(window.location.origin + "/stride-api/plantilla-data");
 
         if (filters.drillLevel === "Region" || filters.drillLevel === "Division" || filters.drillLevel === "DistrictGroup") {
             if (filters.region && filters.region !== "All Regions") {

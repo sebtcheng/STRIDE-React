@@ -35,7 +35,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
         try {
             const schoolId = school.id || school.school_id;
             if (!schoolId) throw new Error("No school ID found");
-            const res = await fetch(`/api/school-profile/${schoolId}`);
+            const res = await fetch(`/stride-api/school-profile/${schoolId}`);
             const data = await res.json();
             if (data.status === "success") {
                 setFullProfile(data.data);
@@ -65,7 +65,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 school_id: selectedSchool.id,
                 ...(localFilters.region && localFilters.region !== "All Regions" && { region: localFilters.region })
             });
-            fetch(`/api/resource-mapping/industries?${params.toString()}`)
+            fetch(`/stride-api/resource-mapping/industries?${params.toString()}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -90,7 +90,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
 
     // Initial Schema Fetch
     useEffect(() => {
-        const url = new URL(window.location.origin + "/api/dropdowns");
+        const url = new URL(window.location.origin + "/stride-api/dropdowns");
         if (localFilters.region && localFilters.region !== "All Regions") url.searchParams.append("region", localFilters.region);
         if (localFilters.division) url.searchParams.append("division", localFilters.division);
 
@@ -131,7 +131,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 efd_type: Array.isArray(filters.efd_type) ? filters.efd_type.join(',') : (filters.efd_type || '')
             });
 
-            const res = await fetch(`/api/resource-mapping?${params.toString()}`);
+            const res = await fetch(`/stride-api/resource-mapping?${params.toString()}`);
             const data = await res.json();
             if (data.status === "success") {
                 setMapData({ points: data.data.points, industryPoints: data.data.industryPoints || [], summary: data.data.summary, totalMatched: data.data.totalMatched, loading: false });

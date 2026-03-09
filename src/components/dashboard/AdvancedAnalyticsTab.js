@@ -35,7 +35,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
             setLoading(true);
             setHasQueried(true);
             try {
-                const req = await fetch('/api/advanced-analytics', {
+                const req = await fetch('/stride-api/advanced-analytics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -172,7 +172,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
     const downloadCSV = async () => {
         if (!filters.aa_variables || filters.aa_variables.length === 0) return;
         try {
-            const req = await fetch('/api/advanced-analytics/export-csv', {
+            const req = await fetch('/stride-api/advanced-analytics/export-csv', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -201,7 +201,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
     const downloadReport = async () => {
         if (!graphData) return;
         try {
-            const req = await fetch('/api/advanced-analytics/export-report', {
+            const req = await fetch('/stride-api/advanced-analytics/export-report', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -233,7 +233,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
         setLoadingProfile(true);
         setFullProfile(null);
         try {
-            const res = await fetch(`/api/school-profile/${school.id}`);
+            const res = await fetch(`/stride-api/school-profile/${school.id}`);
             const data = await res.json();
             if (data.status === "success") {
                 setFullProfile(data.data);

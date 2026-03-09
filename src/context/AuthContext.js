@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await fetch('/api/auth/me');
+                const res = await fetch('/stride-api/auth/me');
                 if (res.ok) {
                     const data = await res.json();
                     if (data.user) {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
             throw new Error("Unauthorized: Only @deped.gov.ph emails are allowed.");
         }
 
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('/stride-api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -68,7 +68,7 @@ export function AuthProvider({ children }) {
             throw new Error("Unauthorized: Only @deped.gov.ph emails are allowed.");
         }
 
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('/stride-api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, otpCode, ...userData })
@@ -95,7 +95,7 @@ export function AuthProvider({ children }) {
 
         try {
             // Save to Azure SQL via API
-            const azureResponse = await fetch('/api/auth/guest', {
+            const azureResponse = await fetch('/stride-api/auth/guest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(guestData)
@@ -132,7 +132,7 @@ export function AuthProvider({ children }) {
         try {
             // If they are a standard user, clear the session cookie
             if (role !== "guest") {
-                await fetch('/api/auth/logout', { method: 'POST' });
+                await fetch('/stride-api/auth/logout', { method: 'POST' });
             }
         } catch (err) {
             console.error("Logout error:", err);
