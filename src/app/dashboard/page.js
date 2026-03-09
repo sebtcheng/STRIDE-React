@@ -16,10 +16,9 @@ import CloudRegionalTab from "@/components/dashboard/CloudRegionalTab";
 import CloudSDOTab from "@/components/dashboard/CloudSDOTab";
 import CloudMultiTab from "@/components/dashboard/CloudMultiTab";
 import DataExplorerTab from "@/components/dashboard/DataExplorerTab";
-import ContactUsTab from "@/components/dashboard/ContactUsTab";
-
 import Navbar from "@/components/layout/Navbar";
 import HelpDrawer from "@/components/layout/HelpDrawer";
+import useIsMobile from "@/hooks/useIsMobile";
 
 // Import Leaflet styles globally for this route
 import "leaflet/dist/leaflet.css";
@@ -64,8 +63,16 @@ const initialFilters = {
 export default function DashboardPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "interactive");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Mobile Override: If on mobile, force to 'search' if current tab isn't allowed
+    useEffect(() => {
+        if (isMobile && activeTab !== "search" && activeTab !== "home" && activeTab !== "contact") {
+            handleTabChange("search");
+        }
+    }, [isMobile, activeTab]);
 
     // Watch for url query parameter changes and update the active tab
     useEffect(() => {
@@ -164,7 +171,7 @@ export default function DashboardPage() {
         });
     };
 
-    const navigation = [
+    const desktopNavigation = [
         { id: "home", label: "Home", type: "standalone" },
         {
             id: "menu-dashboard",
@@ -182,6 +189,13 @@ export default function DashboardPage() {
         { id: "data_explorer", label: "Data Explorer", type: "standalone", restricted: true }
     ];
 
+    const mobileNavigation = [
+        { id: "home", label: "Home", type: "standalone" },
+        { id: "search", label: "Mobile Finder", type: "standalone" }
+    ];
+
+    const navigation = isMobile ? mobileNavigation : desktopNavigation;
+
     return (
         <div className="flex flex-col h-screen w-full">
             <Navbar
@@ -193,8 +207,8 @@ export default function DashboardPage() {
             <HelpDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Sticky Sidebar Controls - Hub for all Tab Inputs */}
-                {activeTab !== "contact" && (
+                {/* Sticky Sidebar Controls - Hub for all Tab Inputs (HIDDEN ON MOBILE) */}
+                {!isMobile && activeTab !== "contact" && (
                     <SidebarControls
                         activeTab={activeTab}
                         filters={filters}

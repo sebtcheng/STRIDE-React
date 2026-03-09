@@ -197,6 +197,85 @@ export default function QuickSearchTab({ filters }) {
         }
     };
 
+    const isMobile = useIsMobile();
+
+    // Mobile-Specific View
+    if (isMobile) {
+        return (
+            <div className="flex flex-col h-full bg-[#f8fafc] overflow-y-auto">
+                <div className="p-4 flex flex-col gap-4">
+                    {/* Simplified Search Header */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col p-4 mb-2">
+                        <h2 className="font-bold text-[#003366] text-lg mb-2">Mobile Finder</h2>
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search by School Name or ID..."
+                                className="w-full pl-10 pr-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                value={filterText}
+                                onChange={e => setFilterText(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Results List for Mobile */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                        <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h3 className="font-bold text-[#003366] text-sm flex items-center gap-2">
+                                <Search size={14} /> Results ({filteredResults.length})
+                            </h3>
+                        </div>
+
+                        {loadingSearch ? (
+                            <div className="p-10 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-[#003366] animate-spin opacity-50" />
+                                <span className="text-xs font-bold text-gray-400">Loading...</span>
+                            </div>
+                        ) : filteredResults.length > 0 ? (
+                            <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                                {filteredResults.slice(0, 50).map((school, i) => ( // Cap at 50 for performance
+                                    <div
+                                        key={school.id || i}
+                                        onClick={() => handleSelection(school, false)}
+                                        className="p-4 hover:bg-blue-50 transition-colors cursor-pointer flex flex-col gap-1 active:bg-blue-100"
+                                    >
+                                        <div className="font-bold text-[13px] text-gray-900 leading-tight">
+                                            {school.name}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                            <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">ID: {school.id}</span>
+                                            <span className="truncate">{school.municipality || school.city}, {school.province}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {filteredResults.length > 50 && (
+                                    <div className="p-4 text-center text-xs text-gray-400 italic bg-gray-50">
+                                        Showing first 50 results. Use search to refine.
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="p-10 text-center text-sm text-gray-400 font-medium">
+                                No schools found. Try a different search.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Detail View Modal (Reused) */}
+                <SchoolProfileModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    school={selectedSchool}
+                    fullProfile={fullProfile}
+                    loadingProfile={loadingProfile}
+                />
+            </div>
+        );
+    }
+
+    // Standard Desktop View
     return (
         <div className="flex flex-col h-full bg-[#f8fafc] overflow-y-auto">
             {/* Master View: Search & Map (6-6) */}
@@ -322,3 +401,4 @@ export default function QuickSearchTab({ filters }) {
         </div>
     );
 }
+
