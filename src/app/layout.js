@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "STRIDE | DepEd Phase",
+  title: "STRIDE Dashboard",
   description: "Strategic Resource Inventory for Deployment Efficiency",
 };
 

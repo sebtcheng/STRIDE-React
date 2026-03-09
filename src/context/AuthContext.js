@@ -44,7 +44,15 @@ export function AuthProvider({ children }) {
             body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json();
+        const contentType = res.headers.get("content-type");
+        let data;
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            data = await res.json();
+        } else {
+            const text = await res.text();
+            console.error("Non-JSON response received:", text);
+            throw new Error("Server returned an invalid response (HTML). Check database credentials or server logs.");
+        }
 
         if (!res.ok) {
             throw new Error(data.error || "Login failed.");
@@ -94,9 +102,16 @@ export function AuthProvider({ children }) {
             });
 
             if (!azureResponse.ok) {
-                const errorData = await azureResponse.json();
-                console.warn("Azure SQL Guest Save failed:", errorData);
-                throw new Error("Guest login failed at the server.");
+                const contentType = azureResponse.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await azureResponse.json();
+                    console.warn("Azure SQL Guest Save failed:", errorData);
+                    throw new Error(errorData.error || "Guest login failed at the server.");
+                } else {
+                    const errorText = await azureResponse.text();
+                    console.error("Non-JSON error response:", errorText);
+                    throw new Error("Server error (HTML). Check database connection or .env file.");
+                }
             } else {
                 console.log("Azure SQL Guest Save successful.");
             }
