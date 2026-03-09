@@ -76,7 +76,7 @@ const SelectDropdown = ({ label, options, field, placeholder = "All...", filters
     </div>
 );
 
-export default function SidebarControls({ activeTab, filters, setFilters, drillDown, goBack }) {
+export default function SidebarControls({ activeTab, filters, setFilters, drillDown, goBack, isMobile, onShowMobileResults }) {
     const [resourceMappingMode, setResourceMappingMode] = useState("Standard");
     const [quickSearchAdvanced, setQuickSearchAdvanced] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null); // Track which dropdown is open
@@ -347,7 +347,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
     if (activeTab === "resource_mapping") return null;
 
     return (
-        <aside className="w-64 lg:w-72 bg-white border-r border-gray-200 h-[calc(100vh-64px)] overflow-y-auto flex flex-col shrink-0">
+        <aside className="w-full lg:w-72 bg-white lg:border-r border-gray-200 h-[calc(100vh-64px)] overflow-y-auto flex flex-col shrink-0 relative">
             <div className="p-4 bg-[#003366] text-white flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Operational Logic</span>
@@ -483,7 +483,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                 selectedKey="selected_positions"
                             />
 
-                            <div className="pt-4 border-t border-gray-100 mt-6">
+                            <div className="pt-4 border-t border-gray-100 mt-6 pb-20 lg:pb-0">
                                 <button
                                     disabled={role === 'guest'}
                                     title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Generate Plantilla Report"}
@@ -531,7 +531,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             selectedKey="infra_categories"
                         />
 
-                        <div className="pt-4 border-t border-gray-100 mt-6">
+                        <div className="pt-4 border-t border-gray-100 mt-6 pb-20 lg:pb-0">
                             <button
                                 disabled={role === 'guest'}
                                 title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Generate Infrastructure Report"}
@@ -695,7 +695,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             </button>
                         </div>
 
-                        <div className="pt-4 border-t border-gray-100 mt-4">
+                        <div className="pt-4 border-t border-gray-100 mt-4 pb-20 lg:pb-0">
                             <button
                                 onClick={() => setFilters({ aa_trigger: Date.now() })}
                                 className="w-full flex items-center justify-center gap-2 bg-[#FFB81C] hover:bg-[#eab308] text-[#003366] font-black py-3 px-4 rounded-xl transition-all shadow-md text-[10px] uppercase tracking-wider"
@@ -770,22 +770,24 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                             </div>
                         )}
 
-                        <div className="flex gap-2 mt-2">
-                            <button
-                                onClick={() => setFilters({ q: '', region: 'All Regions', division: '', district: '', municipality: '' })}
-                                className="flex-1 text-xs font-bold py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-200 shadow-sm"
-                            >
-                                CLEAR
-                            </button>
-                            <button
-                                disabled={!filters.q && (!filters.region || filters.region === 'All Regions')}
-                                onClick={() => setFilters({ triggerSearch: Date.now() })}
-                                className="flex-[2] flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md text-xs"
-                            >
-                                <Search size={14} />
-                                SHOW SELECTION
-                            </button>
-                        </div>
+                        {!isMobile && (
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={() => setFilters({ q: '', region: 'All Regions', division: '', district: '', municipality: '' })}
+                                    className="flex-1 text-xs font-bold py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-200 shadow-sm"
+                                >
+                                    CLEAR
+                                </button>
+                                <button
+                                    disabled={!filters.q && (!filters.region || filters.region === 'All Regions')}
+                                    onClick={() => setFilters({ triggerSearch: Date.now() })}
+                                    className="flex-[2] flex items-center justify-center gap-2 bg-[#003366] hover:bg-[#002244] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md text-xs"
+                                >
+                                    <Search size={14} />
+                                    SHOW SELECTION
+                                </button>
+                            </div>
+                        )}
                     </section>
                 )}
 
@@ -962,7 +964,18 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
             </div>
 
-
+            {/* Mobile Fixed Bottom Bar */}
+            {isMobile && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-50 animate-slide-up">
+                    <button
+                        onClick={onShowMobileResults}
+                        className="w-full bg-[#003366] text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 text-sm"
+                    >
+                        Show Selected Data
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                    </button>
+                </div>
+            )}
         </aside>
     );
 }

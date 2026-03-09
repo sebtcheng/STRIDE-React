@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import SidebarControls from "@/components/dashboard/SidebarControls";
 import InteractiveDashboardTab from "@/components/dashboard/InteractiveDashboardTab";
 import SchoolLocatorTab from "@/components/dashboard/SchoolLocatorTab";
@@ -66,13 +67,11 @@ export default function DashboardPage() {
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "interactive");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isMobileResultsOpen, setIsMobileResultsOpen] = useState(false);
+    const [interactiveSubTab, setInteractiveSubTab] = useState('visuals'); // 'visuals' or 'locator'
+    const lastDrillTime = useRef(0);
 
-    // Mobile Override: If on mobile, force to 'search' if current tab isn't allowed
-    useEffect(() => {
-        if (isMobile && activeTab !== "search" && activeTab !== "home" && activeTab !== "contact") {
-            handleTabChange("search");
-        }
-    }, [isMobile, activeTab]);
+
 
     // Watch for url query parameter changes and update the active tab
     useEffect(() => {
@@ -88,6 +87,7 @@ export default function DashboardPage() {
             return;
         }
         setActiveTab(newTabId);
+        setIsMobileResultsOpen(false); // Reset to filters view when changing tabs on mobile
         // Shallow update URL
         router.push(`/dashboard?tab=${newTabId}`, { scroll: false });
     };
@@ -113,6 +113,10 @@ export default function DashboardPage() {
     };
 
     const applyDrillDown = (level, name, groupingTarget) => {
+        const now = Date.now();
+        if (now - lastDrillTime.current < 500) return; // Prevent rapid multi-drills (especially on mobile)
+        lastDrillTime.current = now;
+
         setTabFilters(prevTab => {
             const currentTabState = prevTab[activeTab] || initialFilters;
 
@@ -171,7 +175,8 @@ export default function DashboardPage() {
         });
     };
 
-    const desktopNavigation = [
+    // Unified navigation for both desktop and mobile to support new mobile flow
+    const navigation = [
         { id: "home", label: "Home", type: "standalone" },
         {
             id: "menu-dashboard",
@@ -189,13 +194,6 @@ export default function DashboardPage() {
         { id: "data_explorer", label: "Data Explorer", type: "standalone", restricted: true }
     ];
 
-    const mobileNavigation = [
-        { id: "home", label: "Home", type: "standalone" },
-        { id: "search", label: "Mobile Finder", type: "standalone" }
-    ];
-
-    const navigation = isMobile ? mobileNavigation : desktopNavigation;
-
     return (
         <div className="flex flex-col h-screen w-full">
             <Navbar
@@ -206,38 +204,101 @@ export default function DashboardPage() {
             />
             <HelpDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sticky Sidebar Controls - Hub for all Tab Inputs (HIDDEN ON MOBILE) */}
-                {!isMobile && activeTab !== "contact" && (
+            <div className="flex flex-1 overflow-hidden relative">
+                {/* 
+                  * SIDEBAR CONTROLS 
+                  * Desktop: Sticky Left Side (if not contact)
+                  * Mobile: Full Width Overlay Document (if !isMobileResultsOpen)
+                  */}
+                {activeTab !== "contact" && (!isMobile || (isMobile && !isMobileResultsOpen)) && (
                     <SidebarControls
                         activeTab={activeTab}
                         filters={filters}
                         setFilters={updateFilters}
                         drillDown={applyDrillDown}
                         goBack={rollbackLevel}
+                        isMobile={isMobile}
+                        onShowMobileResults={() => setIsMobileResultsOpen(true)}
                     />
                 )}
 
-                {/* Main View Area - Data Display Only */}
-                <main className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white">
-                        <div key={activeTab} className="animate-tab-enter flex flex-col h-full w-full">
-                            {activeTab === "interactive" && <InteractiveDashboardTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                            {activeTab === "locator" && <SchoolLocatorTab filters={filters} />}
-                            {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                            {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
-                            {activeTab === "infra" && <InfrastructureTab filters={filters} />}
-                            {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
-                            {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} setFilters={updateFilters} />}
-                            {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
-                            {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
-                            {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}
-                            {activeTab === "data_explorer" && <DataExplorerTab filters={filters} />}
-                            {activeTab === "contact" && <ContactUsTab />}
-                            {activeTab === "input" && <DataInputTab filters={filters} />}
+                {/* 
+                  * MAIN VIEW AREA (Data Display)
+                  * Desktop: Takes remaining space
+                  * Mobile: Full Width Overlay Document (if isMobileResultsOpen), else Hidden
+                  */}
+                {(!isMobile || (isMobile && isMobileResultsOpen) || activeTab === "contact") && (
+                    <main className={`flex-1 flex flex-col h-full overflow-hidden bg-white ${isMobile ? 'absolute inset-0 z-40' : 'relative'}`}>
+                        {/* Mobile 'Filters', 'Back', and 'View Toggle' Sticky Header */}
+                        {isMobile && activeTab !== "contact" && activeTab !== "search" && (
+                            <div className="bg-[#003366] text-white p-3 flex items-center shadow-md z-40 shrink-0 gap-3">
+                                <button
+                                    onClick={() => setIsMobileResultsOpen(false)}
+                                    className="flex items-center gap-1.5 text-sm font-bold hover:text-blue-200 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                                    Filters
+                                </button>
+
+                                {filters.history?.length > 0 && (
+                                    <button
+                                        onClick={rollbackLevel}
+                                        className="flex items-center gap-1 text-xs font-bold bg-[#CE1126] hover:bg-red-800 px-2.5 py-1.5 rounded-md transition-colors border border-red-500/30"
+                                    >
+                                        <ArrowLeft size={12} /> BACK
+                                    </button>
+                                )}
+
+                                {/* Sub-tab Toggle for Interactive Dashboard */}
+                                {activeTab === 'interactive' && (
+                                    <div className="flex bg-white/10 p-1 rounded-lg ml-2">
+                                        <button
+                                            onClick={() => setInteractiveSubTab('visuals')}
+                                            className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${interactiveSubTab === 'visuals' ? 'bg-white text-[#003366] shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                        >
+                                            Data
+                                        </button>
+                                        <button
+                                            onClick={() => setInteractiveSubTab('locator')}
+                                            className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${interactiveSubTab === 'locator' ? 'bg-white text-[#003366] shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                        >
+                                            Map
+                                        </button>
+                                    </div>
+                                )}
+
+
+                            </div>
+                        )}
+
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white">
+                            <div key={activeTab} className="animate-tab-enter flex flex-col h-full w-full">
+                                {activeTab === "interactive" && (
+                                    <InteractiveDashboardTab
+                                        filters={filters}
+                                        drillDown={applyDrillDown}
+                                        goBack={rollbackLevel}
+                                        subTabOverride={interactiveSubTab}
+                                        onSubTabChange={setInteractiveSubTab}
+                                        isMobile={isMobile}
+                                    />
+                                )}
+                                {activeTab === "locator" && <SchoolLocatorTab filters={filters} isMobile={isMobile} />}
+                                {activeTab === "advanced_analytics" && <AdvancedAnalyticsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
+                                {activeTab === "plantilla" && <PlantillaPositionsTab filters={filters} drillDown={applyDrillDown} goBack={rollbackLevel} />}
+                                {activeTab === "infra" && <InfrastructureTab filters={filters} />}
+                                {activeTab === "search" && <QuickSearchTab filters={filters} setFilters={updateFilters} />}
+                                {activeTab === "resource_mapping" && <ResourceMappingTab filters={filters} setFilters={updateFilters} />}
+                                {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
+                                {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
+                                {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}
+                                {activeTab === "data_explorer" && <DataExplorerTab filters={filters} />}
+                                {activeTab === "contact" && <ContactUsTab />}
+                                {activeTab === "input" && <DataInputTab filters={filters} />}
+                            </div>
                         </div>
-                    </div>
-                </main>
+                    </main>
+                )}
             </div>
         </div>
     );

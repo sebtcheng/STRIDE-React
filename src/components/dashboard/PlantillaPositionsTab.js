@@ -116,9 +116,11 @@ export default function PlantillaPositionsTab({ filters, drillDown, goBack }) {
         const clickedName = String(name).trim();
 
         if (groupingLevel === "Region") {
-            drillDown("Region", clickedName, "region");
+            // Viewing National (Region bars) -> Set Region
+            drillDown("Region", clickedName);
         } else if (groupingLevel === "Division") {
-            drillDown("Division", clickedName, "division");
+            // Viewing Region (Division bars) -> Set Division
+            drillDown("Division", clickedName);
         }
     };
 

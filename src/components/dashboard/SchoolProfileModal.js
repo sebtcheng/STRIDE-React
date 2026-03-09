@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { X, Download, Building2, MapPin, Users, AlertCircle, Building, AlertTriangle, Settings2, CheckSquare, Info, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const InfoCard = ({ title, icon, children, color = "blue" }) => {
     const colors = {
@@ -34,6 +35,7 @@ const DataItem = ({ label, value, subValue }) => (
 );
 
 export default function SchoolProfileModal({ isOpen, onClose, school, fullProfile, loadingProfile }) {
+    const isMobile = useIsMobile();
     const { role } = useAuth();
     // ESC Key Listener for Modal
     useEffect(() => {
@@ -62,36 +64,37 @@ export default function SchoolProfileModal({ isOpen, onClose, school, fullProfil
             <div className="relative bg-white w-full max-w-6xl max-h-full rounded-3xl shadow-2xl border border-white/20 overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
                 {/* Modal Header */}
                 {!school ? null : (
-                    <div className="p-6 bg-[#003366] text-white flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-[#FFB81C] p-2.5 rounded-xl text-[#003366] shadow-lg shadow-orange-500/20">
-                                <Building2 size={24} />
+                    <div className="p-4 lg:p-6 bg-[#003366] text-white flex justify-between items-center shrink-0 gap-3">
+                        <div className="flex items-center gap-3 lg:gap-4 min-w-0">
+                            <div className="bg-[#FFB81C] p-2 rounded-xl text-[#003366] shadow-lg shadow-orange-500/20 shrink-0">
+                                <Building2 size={isMobile ? 18 : 24} />
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-black leading-tight tracking-tight">{fullProfile?.profile?.school_name || school?.name || school?.school_name || 'Unknown School'}</h2>
-                                <p className="text-blue-200 text-xs font-bold tracking-widest uppercase flex items-center gap-2">
+                            <div className="min-w-0">
+                                <h2 className="text-sm lg:text-2xl font-black leading-tight tracking-tight truncate">{fullProfile?.profile?.school_name || school?.name || school?.school_name || 'Unknown School'}</h2>
+                                <p className="text-blue-200 text-[10px] lg:text-xs font-bold tracking-widest uppercase flex items-center gap-2 truncate">
                                     ID: {school?.id || school?.schoolid}
                                     <span className="opacity-30">•</span>
-                                    {fullProfile?.profile?.municipality || school?.municipality}, {fullProfile?.profile?.region || school?.region}
+                                    {fullProfile?.profile?.municipality || school?.municipality}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 lg:gap-3 shrink-0">
                             <button
                                 disabled={role === 'guest'}
                                 title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Export School Profile to PDF"}
                                 onClick={() => {
                                     window.open(`/api/quick-search/export-profile?schoolId=${school.id}`, '_blank');
                                 }}
-                                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 border border-white/10 backdrop-blur-sm transition-all ${role === 'guest' ? 'bg-white/5 text-white/50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                                className={`p-2 lg:px-4 lg:py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-white/10 backdrop-blur-sm transition-all ${role === 'guest' ? 'bg-white/5 text-white/50 cursor-not-allowed' : 'bg-white/20 hover:bg-white/30 text-white shadow-inner whitespace-nowrap'}`}
                             >
-                                <Download size={14} /> EXPORT PDF
+                                <Download size={isMobile ? 18 : 14} />
+                                <span className="hidden lg:inline">EXPORT PDF</span>
                             </button>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors group"
+                                className="bg-[#CE1126] hover:bg-red-800 text-white px-3 py-2 lg:px-4 lg:py-2 rounded-xl font-black text-[10px] lg:text-xs flex items-center gap-1.5 lg:gap-2 shadow-lg transition-all active:scale-95 border border-red-400/20 shadow-red-900/40"
                             >
-                                <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                                <X size={isMobile ? 16 : 18} /> <span className="uppercase">Exit</span>
                             </button>
                         </div>
                     </div>

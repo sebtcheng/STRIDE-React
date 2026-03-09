@@ -8,8 +8,10 @@ import SchoolLocatorTab from "./SchoolLocatorTab";
 // Dynamically import Plotly with next/dynamic and no SSR to prevent issues with window variable missing 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-gray-400">Loading Chart Engine...</div> });
 
-export default function InteractiveDashboardTab({ filters, drillDown, goBack }) {
-    const [subTab, setSubTab] = useState("visuals");
+export default function InteractiveDashboardTab({ filters, drillDown, goBack, subTabOverride, onSubTabChange, isMobile }) {
+    const [localSubTab, setLocalSubTab] = useState("visuals");
+    const subTab = subTabOverride || localSubTab;
+    const setSubTab = onSubTabChange || setLocalSubTab;
     const [dashboardBlocks, setDashboardBlocks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -158,8 +160,8 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
 
     return (
         <div className="flex flex-col h-full w-full bg-[#f8fafc]">
-            {/* navset_card_tab: Dashboard vs Locator */}
-            <div className="bg-white border-b border-gray-200 px-6 pt-4 shrink-0 flex gap-6 z-10 shadow-sm">
+            {/* navset_card_tab: Dashboard vs Locator (Hidden on mobile as it's now in the sticky header) */}
+            <div className="hidden md:flex bg-white border-b border-gray-200 px-6 pt-4 shrink-0 gap-6 z-10 shadow-sm">
                 <button
                     onClick={() => setSubTab('visuals')}
                     className={`pb-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${subTab === 'visuals' ? 'border-[#003366] text-[#003366]' : 'border-transparent text-gray-400 hover:text-gray-700 hover:border-gray-300'}`}
@@ -497,7 +499,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack }) 
                                 </div>
                             </div>
                         ) : (
-                            <SchoolLocatorTab filters={filters} />
+                            <SchoolLocatorTab filters={filters} isMobile={isMobile} />
                         )}
                     </div>
                 )}

@@ -5,13 +5,14 @@ import DataTable from "react-data-table-component";
 import { Search, MapPin, Download, Filter, Settings2, Loader2, Building2, Users, Building, AlertTriangle, AlertCircle, CheckSquare, Database, Info, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import SchoolProfileModal from "./SchoolProfileModal";
+import useIsMobile from "@/hooks/useIsMobile";
 
 const SchoolPreviewMap = dynamic(() => import("./SchoolPreviewMap"), {
     ssr: false,
     loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center">Loading Map Engine...</div>
 });
 
-export default function QuickSearchTab({ filters }) {
+export default function QuickSearchTab({ filters, setFilters }) {
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [fullProfile, setFullProfile] = useState(null);
     const [searchResults, setSearchResults] = useState([]);
@@ -213,8 +214,8 @@ export default function QuickSearchTab({ filters }) {
                                 type="text"
                                 placeholder="Search by School Name or ID..."
                                 className="w-full pl-10 pr-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                                value={filterText}
-                                onChange={e => setFilterText(e.target.value)}
+                                value={filters.q || ''}
+                                onChange={e => setFilters({ q: e.target.value })}
                             />
                         </div>
                     </div>

@@ -14,7 +14,7 @@ const DynamicMap = dynamic(
 
 // Leaflet CSS needs to be imported or handled in layout, but let's mock the UI for now.
 
-export default function SchoolLocatorTab({ filters }) {
+export default function SchoolLocatorTab({ filters, isMobile }) {
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -132,10 +132,10 @@ export default function SchoolLocatorTab({ filters }) {
     return (
         <div className="flex flex-col h-full bg-white relative">
             {/* Top Split View */}
-            <div className="flex-1 flex flex-col lg:flex-row h-full">
+            <div className={`flex-1 flex flex-col lg:flex-row h-full ${isMobile ? 'overflow-hidden' : ''}`}>
 
                 {/* Left Data Table Pane */}
-                <div className="w-full lg:w-1/2 p-4 border-r border-gray-200 flex flex-col h-full bg-gray-50/30">
+                <div className={`w-full lg:w-1/2 p-4 border-r border-gray-200 flex flex-col bg-gray-50/30 ${isMobile && !searchTerm ? 'h-auto' : 'h-full'}`}>
                     <div className="mb-4 relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                             <Search size={16} />
@@ -157,33 +157,36 @@ export default function SchoolLocatorTab({ filters }) {
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto border border-gray-200 rounded-xl shadow-sm bg-white">
-                        <DataTable
-                            columns={columns}
-                            data={filteredSchools}
-                            progressPending={loading}
-                            progressComponent={
-                                <div className="p-10 flex flex-col items-center justify-center gap-2">
-                                    <div className="relative">
-                                        <Loader2 className="w-8 h-8 text-[#003366] animate-spin" />
-                                        <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse"></div>
+                    {(!isMobile || searchTerm) && (
+                        <div className="flex-1 overflow-y-auto border border-gray-200 rounded-xl shadow-sm bg-white">
+                            <DataTable
+                                columns={columns}
+                                data={filteredSchools}
+                                progressPending={loading}
+                                progressComponent={
+                                    <div className="p-10 flex flex-col items-center justify-center gap-2">
+                                        <div className="relative">
+                                            <Loader2 className="w-8 h-8 text-[#003366] animate-spin" />
+                                            <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse"></div>
+                                        </div>
+                                        <span className="text-[10px] font-black text-[#003366] mt-2 uppercase tracking-widest opacity-60">Synchronizing...</span>
                                     </div>
-                                    <span className="text-[10px] font-black text-[#003366] mt-2 uppercase tracking-widest opacity-60">Synchronizing...</span>
-                                </div>
-                            }
-                            pagination
-                            fixedHeader
-                            paginationPerPage={10}
-                            highlightOnHover
-                            pointerOnHover
-                            onRowClicked={handleRowClick}
-                            noDataComponent={<div className="p-10 text-gray-400">Search for a school or use filters to begin</div>}
-                            customStyles={{
-                                headRow: { style: { backgroundColor: '#003366', color: 'white', fontWeight: 'bold' } },
-                                rows: { style: { '&:hover': { backgroundColor: '#f0f9ff' } } }
-                            }}
-                        />
-                    </div>
+                                }
+                                pagination
+                                fixedHeader
+                                paginationPerPage={isMobile ? 3 : 10}
+                                paginationRowsPerPageOptions={isMobile ? [3, 5, 10] : [10, 20, 30]}
+                                highlightOnHover
+                                pointerOnHover
+                                onRowClicked={handleRowClick}
+                                noDataComponent={<div className="p-10 text-gray-400">Search for a school or use filters to begin</div>}
+                                customStyles={{
+                                    headRow: { style: { backgroundColor: '#003366', color: 'white', fontWeight: 'bold' } },
+                                    rows: { style: { '&:hover': { backgroundColor: '#f0f9ff' } } }
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Map Pane */}
