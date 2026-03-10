@@ -572,7 +572,7 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
 
                                                         // Auto-populate default min/max or selected values
                                                         if (schemaAA.ranges && schemaAA.ranges[newCol]) {
-                                                            newVars[i].min = schemaAA.ranges[newCol][0];
+                                                            newVars[i].min = Math.max(1, schemaAA.ranges[newCol][0]);
                                                             newVars[i].max = schemaAA.ranges[newCol][1];
                                                             delete newVars[i].values;
                                                         } else if (schemaAA[newCol]) {
@@ -580,7 +580,6 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                                             delete newVars[i].min;
                                                             delete newVars[i].max;
                                                         }
-
                                                         setFilters({ aa_variables: newVars });
                                                     }}
                                                     className="w-full bg-white border border-blue-200 rounded-lg p-2 text-xs text-gray-800 font-bold outline-none focus:ring-[#003366] focus:border-[#003366] transition-all"
@@ -622,10 +621,12 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                                     <label className="text-[10px] font-bold text-gray-600 block mb-1 uppercase">Min:</label>
                                                     <input
                                                         type="number"
-                                                        value={v.min !== undefined ? v.min : (schemaAA.ranges[v.column][0] || 0)}
+                                                        min="1"
+                                                        value={v.min !== undefined ? v.min : (Math.max(1, schemaAA.ranges[v.column][0]) || 1)}
                                                         onChange={(e) => {
                                                             const newVars = [...(filters.aa_variables || [])];
-                                                            newVars[i].min = Number(e.target.value);
+                                                            const val = Number(e.target.value);
+                                                            newVars[i].min = val < 1 ? 1 : val;
                                                             setFilters({ aa_variables: newVars });
                                                         }}
                                                         className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs focus:border-[#003366] outline-none"
@@ -635,10 +636,12 @@ export default function SidebarControls({ activeTab, filters, setFilters, drillD
                                                     <label className="text-[10px] font-bold text-gray-600 block mb-1 uppercase">Max:</label>
                                                     <input
                                                         type="number"
-                                                        value={v.max !== undefined ? v.max : (schemaAA.ranges[v.column][1] || 0)}
+                                                        min="1"
+                                                        value={v.max !== undefined ? v.max : (schemaAA.ranges[v.column][1] || 1)}
                                                         onChange={(e) => {
                                                             const newVars = [...(filters.aa_variables || [])];
-                                                            newVars[i].max = Number(e.target.value);
+                                                            const val = Number(e.target.value);
+                                                            newVars[i].max = val < 1 ? 1 : val;
                                                             setFilters({ aa_variables: newVars });
                                                         }}
                                                         className="w-full bg-white border border-gray-300 rounded p-1.5 text-xs focus:border-[#003366] outline-none"

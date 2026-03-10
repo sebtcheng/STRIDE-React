@@ -45,14 +45,14 @@ export async function GET() {
             curricular_offering: curricularOfferingRes.rows.map(r => r.curricular_offering),
             with_buildable_space: buildableSpaceRes.rows.map(r => r.with_buildable_space),
             ranges: {
-                totalenrolment: [Number(ranges.totalenrolment_min) || 0, Number(ranges.totalenrolment_max) || 0],
-                totalteachers: [Number(ranges.totalteachers_min) || 0, Number(ranges.totalteachers_max) || 0],
-                total_shortage: [Number(ranges.total_shortage_min) || 0, Number(ranges.total_shortage_max) || 0],
-                classroom_shortage: [Number(ranges.classroom_shortage_min) || 0, Number(ranges.classroom_shortage_max) || 0],
-                number_of_rooms_good_condition: [Number(ranges.rooms_good_min) || 0, Number(ranges.rooms_good_max) || 0],
-                es_teachers: [Number(ranges.es_teachers_min) || 0, Number(ranges.es_teachers_max) || 0],
-                jhs_teachers: [Number(ranges.jhs_teachers_min) || 0, Number(ranges.jhs_teachers_max) || 0],
-                shs_teachers: [Number(ranges.shs_teachers_min) || 0, Number(ranges.shs_teachers_max) || 0]
+                totalenrolment: [Math.max(1, Number(ranges.totalenrolment_min)) || 1, Number(ranges.totalenrolment_max) || 0],
+                totalteachers: [Math.max(1, Number(ranges.totalteachers_min)) || 1, Number(ranges.totalteachers_max) || 0],
+                total_shortage: [Math.max(1, Number(ranges.total_shortage_min)) || 1, Number(ranges.total_shortage_max) || 0],
+                classroom_shortage: [Math.max(1, Number(ranges.classroom_shortage_min)) || 1, Number(ranges.classroom_shortage_max) || 0],
+                number_of_rooms_good_condition: [Math.max(1, Number(ranges.rooms_good_min)) || 1, Number(ranges.rooms_good_max) || 0],
+                es_teachers: [Math.max(1, Number(ranges.es_teachers_min)) || 1, Number(ranges.es_teachers_max) || 0],
+                jhs_teachers: [Math.max(1, Number(ranges.jhs_teachers_min)) || 1, Number(ranges.jhs_teachers_max) || 0],
+                shs_teachers: [Math.max(1, Number(ranges.shs_teachers_min)) || 1, Number(ranges.shs_teachers_max) || 0]
             }
         };
 

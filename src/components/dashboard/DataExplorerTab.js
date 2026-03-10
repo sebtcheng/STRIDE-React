@@ -5,7 +5,7 @@ import DataTable from "react-data-table-component";
 import { Search, Database, Download } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-export default function DataExplorerTab({ filters }) {
+export default function DataExplorerTab({ filters, isMobile }) {
     const [data, setData] = useState({ rows: [], totalMatched: 0, loading: true });
     const [columnFilters, setColumnFilters] = useState({});
     const { role } = useAuth();
@@ -150,34 +150,34 @@ export default function DataExplorerTab({ filters }) {
             name: renderHeader('Region', 'region'),
             selector: row => row.region,
             sortable: true,
-            width: '130px'
+            width: isMobile ? '100px' : '130px'
         },
-        {
+        (!isMobile && {
             name: renderHeader('Division', 'division'),
             selector: row => row.division,
             sortable: true,
             width: '160px'
-        },
-        {
+        }),
+        (!isMobile && {
             name: renderHeader('District', 'district'),
             selector: row => row.district,
             sortable: true,
             width: '160px'
-        },
+        }),
         {
             name: renderHeader('School ID', 'schoolid'),
             selector: row => row.schoolid,
             sortable: true,
-            width: '130px'
+            width: isMobile ? '100px' : '130px'
         },
         {
             name: renderHeader('School Name', 'schoolname'),
             selector: row => row.schoolname,
             sortable: true,
-            minWidth: '280px',
+            minWidth: isMobile ? '200px' : '280px',
             grow: 1
         }
-    ];
+    ].filter(Boolean);
 
     const dynamicColumns = [];
     Object.keys(filters.data_explorer_selections || {}).forEach(domain => {
@@ -206,52 +206,55 @@ export default function DataExplorerTab({ filters }) {
     return (
         <div className="flex flex-col h-full bg-[#f8fafc]">
             {/* Header Area */}
-            <div className="p-6 bg-white border-b border-gray-200 shadow-sm z-10">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-6">
+            <div className="p-4 md:p-6 bg-white border-b border-gray-200 shadow-sm z-10">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <div>
-                            <h2 className="text-xl font-black text-[#003366] mb-1 flex items-center gap-2">
+                            <h2 className="text-lg md:text-xl font-black text-[#003366] mb-1 flex items-center gap-2">
                                 <Database size={20} className="text-[#FFB81C]" />
                                 Information Database
                             </h2>
                             <p className="text-gray-400 text-[10px] uppercase font-bold tracking-widest leading-none">STRIDE Unified Master Record • authenticated</p>
                         </div>
-                        <div className="px-3 py-1 bg-green-50 text-green-700 text-[10px] font-black rounded-full border border-green-100 flex items-center gap-1.5 uppercase tracking-tighter shadow-sm">
+                        <div className="w-fit px-3 py-1 bg-green-50 text-green-700 text-[10px] font-black rounded-full border border-green-100 flex items-center gap-1.5 uppercase tracking-tighter shadow-sm">
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Ready • Jan 2026 Batch
                         </div>
                     </div>
-                    <div className="flex gap-2 text-sm font-bold text-[#003366]">
-                        {filteredResults.length.toLocaleString()} Schools Visible
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={downloadCSV}
-                            disabled={role === 'guest'}
-                            title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Download CSV Document"}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all font-bold shadow-md ${role === 'guest' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#003366] text-white hover:bg-[#002244]'}`}
-                        >
-                            <Download size={12} /> CSV
-                        </button>
-                        <button
-                            onClick={() => window.print()}
-                            disabled={role === 'guest'}
-                            title={role === 'guest' ? "Printing is disabled for Guest accounts" : "Print Data Explorer view"}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-all font-bold ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-white hover:shadow-md'}`}
-                        >
-                            <Download size={12} /> PRINT
-                        </button>
-                        {['Excel', 'PDF'].map(type => (
-                            <button key={type} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold opacity-50 cursor-not-allowed" title="Coming Soon">
-                                <Download size={12} /> {type}
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="text-xs md:text-sm font-bold text-[#003366] whitespace-nowrap">
+                            {filteredResults.length.toLocaleString()} Schools Visible
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={downloadCSV}
+                                disabled={role === 'guest'}
+                                title={role === 'guest' ? "Downloads are disabled for Guest accounts" : "Download CSV Document"}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all font-bold shadow-md ${role === 'guest' ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#003366] text-white hover:bg-[#002244]'}`}
+                            >
+                                <Download size={12} /> CSV
                             </button>
-                        ))}
+                            <button
+                                onClick={() => window.print()}
+                                disabled={role === 'guest'}
+                                title={role === 'guest' ? "Printing is disabled for Guest accounts" : "Print Data Explorer view"}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-all font-bold ${role === 'guest' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-white hover:shadow-md'}`}
+                            >
+                                <Download size={12} /> PRINT
+                            </button>
+                            {['Excel', 'PDF'].map(type => (
+                                <button key={type} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs hover:bg-white hover:shadow-md transition-all font-bold opacity-50 cursor-not-allowed" title="Coming Soon">
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Table Area with Fixed Column Logic */}
-            <div className="flex-1 overflow-hidden p-6">
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-auto p-4 md:p-6">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col min-w-full">
                     <DataTable
                         columns={finalColumns}
                         data={filteredResults}
@@ -283,20 +286,20 @@ export default function DataExplorerTab({ filters }) {
                                 style: {
                                     paddingLeft: '12px',
                                     paddingRight: '12px',
-                                    '&:nth-child(1)': { position: 'sticky', left: 0, backgroundColor: '#003366', zIndex: 10 },
-                                    '&:nth-child(2)': { position: 'sticky', left: '130px', backgroundColor: '#003366', zIndex: 10 },
-                                    '&:nth-child(3)': { position: 'sticky', left: '290px', backgroundColor: '#003366', zIndex: 10 },
-                                    '&:nth-child(4)': { position: 'sticky', left: '450px', backgroundColor: '#003366', zIndex: 10 },
-                                    '&:nth-child(5)': { position: 'sticky', left: '580px', backgroundColor: '#003366', zIndex: 10, borderRight: '2px solid rgba(255,255,255,0.1)' },
+                                    '&:nth-child(1)': !isMobile ? { position: 'sticky', left: 0, backgroundColor: '#003366', zIndex: 10 } : {},
+                                    '&:nth-child(2)': !isMobile ? { position: 'sticky', left: '130px', backgroundColor: '#003366', zIndex: 10 } : {},
+                                    '&:nth-child(3)': !isMobile ? { position: 'sticky', left: '290px', backgroundColor: '#003366', zIndex: 10 } : {},
+                                    '&:nth-child(4)': !isMobile ? { position: 'sticky', left: '450px', backgroundColor: '#003366', zIndex: 10 } : {},
+                                    '&:nth-child(5)': !isMobile ? { position: 'sticky', left: '580px', backgroundColor: '#003366', zIndex: 10, borderRight: '2px solid rgba(255,255,255,0.1)' } : {},
                                 }
                             },
                             cells: {
                                 style: {
-                                    '&:nth-child(1)': { position: 'sticky', left: 0, backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
-                                    '&:nth-child(2)': { position: 'sticky', left: '130px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
-                                    '&:nth-child(3)': { position: 'sticky', left: '290px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
-                                    '&:nth-child(4)': { position: 'sticky', left: '450px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' },
-                                    '&:nth-child(5)': { position: 'sticky', left: '580px', backgroundColor: '#fff', zIndex: 9, borderRight: '2px solid #e2e8f0', fontWeight: 'bold' },
+                                    '&:nth-child(1)': !isMobile ? { position: 'sticky', left: 0, backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' } : {},
+                                    '&:nth-child(2)': !isMobile ? { position: 'sticky', left: '130px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' } : {},
+                                    '&:nth-child(3)': !isMobile ? { position: 'sticky', left: '290px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' } : {},
+                                    '&:nth-child(4)': !isMobile ? { position: 'sticky', left: '450px', backgroundColor: '#fff', zIndex: 9, borderRight: '1px solid #e2e8f0' } : {},
+                                    '&:nth-child(5)': !isMobile ? { position: 'sticky', left: '580px', backgroundColor: '#fff', zIndex: 9, borderRight: '2px solid #e2e8f0', fontWeight: 'bold' } : {},
                                 }
                             }
                         }}

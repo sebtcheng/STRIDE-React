@@ -210,7 +210,7 @@ export default function DashboardPage() {
                   * Desktop: Sticky Left Side (if not contact)
                   * Mobile: Full Width Overlay Document (if !isMobileResultsOpen)
                   */}
-                {activeTab !== "contact" && (!isMobile || (isMobile && !isMobileResultsOpen)) && (
+                {activeTab !== "contact" && activeTab !== "resource_mapping" && (!isMobile || (isMobile && !isMobileResultsOpen)) && (
                     <SidebarControls
                         activeTab={activeTab}
                         filters={filters}
@@ -227,10 +227,10 @@ export default function DashboardPage() {
                   * Desktop: Takes remaining space
                   * Mobile: Full Width Overlay Document (if isMobileResultsOpen), else Hidden
                   */}
-                {(!isMobile || (isMobile && isMobileResultsOpen) || activeTab === "contact") && (
+                {(!isMobile || (isMobile && isMobileResultsOpen) || activeTab === "contact" || activeTab === "resource_mapping") && (
                     <main className={`flex-1 flex flex-col h-full overflow-hidden bg-white ${isMobile ? 'absolute inset-0 z-40' : 'relative'}`}>
                         {/* Mobile 'Filters', 'Back', and 'View Toggle' Sticky Header */}
-                        {isMobile && activeTab !== "contact" && activeTab !== "search" && (
+                        {isMobile && activeTab !== "contact" && activeTab !== "search" && activeTab !== "resource_mapping" && (
                             <div className="bg-[#003366] text-white p-3 flex items-center shadow-md z-40 shrink-0 gap-3">
                                 <button
                                     onClick={() => setIsMobileResultsOpen(false)}
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white">
+                        <div className="flex-1 overflow-auto relative bg-white">
                             <div key={activeTab} className="animate-tab-enter flex flex-col h-full w-full">
                                 {activeTab === "interactive" && (
                                     <InteractiveDashboardTab
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                                 {activeTab === "cloud_regional" && <CloudRegionalTab filters={filters} />}
                                 {activeTab === "cloud_sdo" && <CloudSDOTab filters={filters} />}
                                 {activeTab === "cloud_multi" && <CloudMultiTab filters={filters} />}
-                                {activeTab === "data_explorer" && <DataExplorerTab filters={filters} />}
+                                {activeTab === "data_explorer" && <DataExplorerTab filters={filters} isMobile={isMobile} />}
                                 {activeTab === "contact" && <ContactUsTab />}
                                 {activeTab === "input" && <DataInputTab filters={filters} />}
                             </div>

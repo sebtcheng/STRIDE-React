@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useDeferredValue } from "react";
+import { useState, useEffect, useMemo, useDeferredValue, useRef } from "react";
 import dynamic from "next/dynamic";
 import DataTable from "react-data-table-component";
 import { Search, MapPin, X, Info, Loader2 } from "lucide-react";
