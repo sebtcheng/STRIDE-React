@@ -98,10 +98,6 @@ export default function InfrastructureTab({ filters }) {
             name: cat,
             type: 'bar',
             marker: { color: catColor },
-            text: allocationY.map(val => val > 0 ? new Intl.NumberFormat('en-PH', { notation: "compact", compactDisplay: "short" }).format(val) : ""),
-            textposition: 'outside',
-            cliponaxis: false,
-            textfont: { color: '#003366', size: 9 },
             hovertemplate: '<b>%{x}</b><br>%{y:$,.0f}<br>%{customdata:.1f}% of Year<extra>%{data.name}</extra>',
             customdata: allocationY.map((val, idx) => (val / totalPerYear[idx]) * 100)
         });
@@ -229,7 +225,7 @@ export default function InfrastructureTab({ filters }) {
             xanchor: 'center',
             yanchor: 'bottom',
             showarrow: false,
-            font: { size: 10, color: '#333' }
+            font: { size: 12, color: '#003366', weight: 'bold' }
         };
     });
 
