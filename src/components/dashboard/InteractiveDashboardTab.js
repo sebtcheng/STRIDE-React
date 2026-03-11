@@ -251,47 +251,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
 
                                             <div
                                                 className="flex-1 min-h-[250px] relative z-10 overflow-y-auto pr-1"
-                                                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                                                onClickCapture={(e) => {
-                                                    if (loading) return;
-                                                    let clickedName = window._hoveredPoint;
-
-                                                    // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
-                                                    if (!clickedName) {
-                                                        try {
-                                                            const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
-                                                            if (plotContainer) {
-                                                                const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
-                                                                const sortedLabels = [...(block.data.labels || [])].sort((a, b) => b.length - a.length);
-
-                                                                for (let i = 0; i < hoverLayers.length; i++) {
-                                                                    const text = hoverLayers[i].textContent;
-                                                                    for (const label of sortedLabels) {
-                                                                        if (text.includes(label)) {
-                                                                            clickedName = label;
-                                                                            break;
-                                                                        }
-                                                                    }
-                                                                    if (clickedName) break;
-                                                                }
-                                                            }
-                                                        } catch (err) {
-                                                            console.error("Error reading fallback tooltip:", err);
-                                                        }
-                                                    }
-
-                                                    console.log("Resolved Clicked Name:", clickedName);
-
-                                                    if (clickedName) {
-                                                        window._hoveredPoint = null; // Consume it immediately
-                                                        const currentFilters = filtersRef.current;
-                                                        if (block.type === 'numeric') {
-                                                            if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
-                                                            else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
-                                                            else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
-                                                        }
-                                                    }
-                                                }}
+                                                style={{ pointerEvents: 'auto' }}
                                             >
                                                 <div style={{ minHeight: `${Math.max(250, (block.data.values?.length || 0) * 35)}px`, height: '100%', position: 'relative', width: '100%' }}>
                                                     <Plot
@@ -327,19 +287,22 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                                                         }}
                                                         config={{ displayModeBar: false, doubleClick: false, responsive: true }}
                                                         useResizeHandler={true}
-                                                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                                        onHover={(event) => {
-                                                            console.log("[Normal View] Plotly onHover fired!", event.points);
+                                                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }}
+                                                        onClick={(event) => {
+                                                            if (loading) return;
                                                             if (event.points && event.points.length > 0) {
-                                                                if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                                window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
-                                                                console.log("[Normal View] Set window._hoveredPoint to:", window._hoveredPoint);
+                                                                const clickedName = String(event.points[0].label || event.points[0].y || '').trim();
+                                                                console.log("Plotly Native Click Resolved:", clickedName);
+
+                                                                if (clickedName) {
+                                                                    const currentFilters = filtersRef.current;
+                                                                    if (block.type === 'numeric') {
+                                                                        if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
+                                                                        else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
+                                                                        else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                                    }
+                                                                }
                                                             }
-                                                        }}
-                                                        onUnhover={() => {
-                                                            console.log("[Normal View] Plotly onUnhover fired!");
-                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                            window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
                                                         }}
                                                     />
                                                 </div>
@@ -386,45 +349,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
 
                                         <div
                                             className="flex-1 relative z-10 w-full min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-y-auto pr-2"
-                                            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                                            onClickCapture={(e) => {
-                                                if (loading) return;
-                                                let clickedName = window._hoveredPoint;
-
-                                                // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
-                                                if (!clickedName) {
-                                                    try {
-                                                        const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
-                                                        if (plotContainer) {
-                                                            const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
-                                                            const sortedLabels = [...(maximizedBlock.data.labels || [])].sort((a, b) => b.length - a.length);
-
-                                                            for (let i = 0; i < hoverLayers.length; i++) {
-                                                                const text = hoverLayers[i].textContent;
-                                                                for (const label of sortedLabels) {
-                                                                    if (text.includes(label)) {
-                                                                        clickedName = label;
-                                                                        break;
-                                                                    }
-                                                                }
-                                                                if (clickedName) break;
-                                                            }
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Error reading fallback tooltip:", err);
-                                                    }
-                                                }
-
-                                                if (clickedName) {
-                                                    window._hoveredPoint = null; // Consume it immediately
-                                                    const currentFilters = filtersRef.current;
-                                                    if (maximizedBlock.type === 'numeric') {
-                                                        if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
-                                                        else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
-                                                        else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
-                                                    }
-                                                }
-                                            }}
+                                            style={{ pointerEvents: 'auto' }}
                                         >
                                             <div style={{ minHeight: `${Math.max(300, (maximizedBlock.data.values?.length || 0) * 45)}px`, height: '100%', position: 'relative', width: '100%' }}>
                                                 <Plot
@@ -465,16 +390,22 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                                                     }}
                                                     config={{ displayModeBar: false, doubleClick: false, responsive: true }}
                                                     useResizeHandler={true}
-                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                                    onHover={(event) => {
+                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }}
+                                                    onClick={(event) => {
+                                                        if (loading) return;
                                                         if (event.points && event.points.length > 0) {
-                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                            const clickedName = String(event.points[0].label || event.points[0].y || '').trim();
+                                                            console.log("Plotly Modal Click Resolved:", clickedName);
+
+                                                            if (clickedName) {
+                                                                const currentFilters = filtersRef.current;
+                                                                if (maximizedBlock.type === 'numeric') {
+                                                                    if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
+                                                                    else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
+                                                                    else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                                }
+                                                            }
                                                         }
-                                                    }}
-                                                    onUnhover={() => {
-                                                        if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                        window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
                                                     }}
                                                 />
                                             </div>

@@ -229,39 +229,7 @@ function PositionCard({ posData, groupingLevel, onChartClick }) {
 
                 <div
                     className="w-full relative overflow-y-auto pr-1"
-                    style={{ height: `${maxChartHeight}px`, pointerEvents: 'auto', cursor: 'pointer' }}
-                    onClickCapture={(e) => {
-                        let clickedName = window._hoveredPoint;
-
-                        // Fallback: forcefully read the Plotly tooltip from the DOM if event failed
-                        if (!clickedName) {
-                            try {
-                                const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
-                                if (plotContainer) {
-                                    const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
-                                    const sortedLabels = [...posData.chartData.groupings].sort((a, b) => b.length - a.length);
-
-                                    for (let i = 0; i < hoverLayers.length; i++) {
-                                        const text = hoverLayers[i].textContent;
-                                        for (const label of sortedLabels) {
-                                            if (text.includes(label)) {
-                                                clickedName = label;
-                                                break;
-                                            }
-                                        }
-                                        if (clickedName) break;
-                                    }
-                                }
-                            } catch (err) {
-                                console.error("Error reading fallback tooltip:", err);
-                            }
-                        }
-
-                        if (clickedName) {
-                            window._hoveredPoint = null;
-                            onChartClick(clickedName);
-                        }
-                    }}
+                    style={{ height: `${maxChartHeight}px`, pointerEvents: 'auto' }}
                 >
                     <Plot
                         data={chartConfig}
@@ -282,17 +250,15 @@ function PositionCard({ posData, groupingLevel, onChartClick }) {
                         useResizeHandler
                         className="w-full h-full"
                         config={{ displayModeBar: false, doubleClick: false, responsive: true }}
-                        onHover={(event) => {
+                        style={{ cursor: 'pointer' }}
+                        onClick={(event) => {
                             if (event.points && event.points.length > 0) {
-                                if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                const clickedName = String(event.points[0].label || event.points[0].y || '').trim();
+                                console.log("Plotly Native Click Resolved (Plantilla):", clickedName);
+                                if (clickedName) {
+                                    onChartClick(clickedName);
+                                }
                             }
-                        }}
-                        onUnhover={() => {
-                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                            window._hoverTimer = setTimeout(() => {
-                                window._hoveredPoint = null;
-                            }, 500);
                         }}
                     />
                 </div>

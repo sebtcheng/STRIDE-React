@@ -395,46 +395,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                                         </div>
                                         <div
                                             className="flex-1 relative w-full pr-4 overflow-y-auto custom-scrollbar"
-                                            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                                            onClickCapture={(e) => {
-                                                if (loading) return;
-                                                let clickedName = window._hoveredPoint;
-
-                                                if (!clickedName) {
-                                                    try {
-                                                        const plotContainer = e.currentTarget.querySelector('.js-plotly-plot');
-                                                        if (plotContainer) {
-                                                            const hoverLayers = plotContainer.querySelectorAll('g.hovertext text');
-                                                            const sortedLabels = [...(graphData.labels || [])].sort((a, b) => b.length - a.length);
-
-                                                            for (let i = 0; i < hoverLayers.length; i++) {
-                                                                const text = hoverLayers[i].textContent;
-                                                                for (const label of sortedLabels) {
-                                                                    if (text.includes(label)) {
-                                                                        clickedName = label;
-                                                                        break;
-                                                                    }
-                                                                }
-                                                                if (clickedName) break;
-                                                            }
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Error reading fallback tooltip:", err);
-                                                    }
-                                                }
-
-                                                if (clickedName && drillDown) {
-                                                    window._hoveredPoint = null;
-                                                    if (filters.municipality) {
-                                                    } else if (filters.division) {
-                                                        drillDown('DistrictGroup', clickedName, 'municipality');
-                                                    } else if (filters.region && filters.region !== 'All Regions') {
-                                                        drillDown('Division', clickedName);
-                                                    } else {
-                                                        drillDown('Region', clickedName);
-                                                    }
-                                                }
-                                            }}
+                                            style={{ pointerEvents: 'auto' }}
                                         >
                                             <div style={{ height: `${Math.max(300, (graphData.values?.length || 0) * 40)}px`, position: 'relative', width: '100%' }}>
                                                 <Plot
@@ -479,16 +440,25 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                                                     }}
                                                     config={{ displayModeBar: false, doubleClick: false, responsive: true }}
                                                     useResizeHandler={true}
-                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
-                                                    onHover={(event) => {
+                                                    style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }}
+                                                    onClick={(event) => {
+                                                        if (loading) return;
                                                         if (event.points && event.points.length > 0) {
-                                                            if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                            window._hoveredPoint = String(event.points[0].label || event.points[0].y || event.points[0].text || '').trim();
+                                                            const clickedName = String(event.points[0].label || event.points[0].y || '').trim();
+                                                            console.log("Plotly Native Click Resolved (AA):", clickedName);
+
+                                                            if (clickedName && drillDown) {
+                                                                if (filters.municipality) {
+                                                                    // Already at municipality level
+                                                                } else if (filters.division) {
+                                                                    drillDown('DistrictGroup', clickedName, 'municipality');
+                                                                } else if (filters.region && filters.region !== 'All Regions') {
+                                                                    drillDown('Division', clickedName);
+                                                                } else {
+                                                                    drillDown('Region', clickedName);
+                                                                }
+                                                            }
                                                         }
-                                                    }}
-                                                    onUnhover={() => {
-                                                        if (window._hoverTimer) clearTimeout(window._hoverTimer);
-                                                        window._hoverTimer = setTimeout(() => { window._hoveredPoint = null; }, 500);
                                                     }}
                                                 />
                                             </div>
