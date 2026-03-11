@@ -249,8 +249,18 @@ export default function Navbar({ toggleDrawer, navigation, activeTab, onTabChang
                                         GUIDE
                                     </button>
                                     <button
+                                        onClick={() => {
+                                            onTabChange('contact');
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                        className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-transform ${activeTab === 'contact' ? 'bg-[#003366] text-white' : 'bg-white border border-gray-100 text-gray-700'}`}
+                                    >
+                                        <Mail size={16} />
+                                        CONTACT
+                                    </button>
+                                    <button
                                         onClick={logout}
-                                        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-red-100 text-[#CE1126] rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-transform"
+                                        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-red-100 text-[#CE1126] rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-transform col-span-2"
                                     >
                                         <LogOut size={16} />
                                         LOGOUT

@@ -18,6 +18,7 @@ import CloudSDOTab from "@/components/dashboard/CloudSDOTab";
 import CloudMultiTab from "@/components/dashboard/CloudMultiTab";
 import DataExplorerTab from "@/components/dashboard/DataExplorerTab";
 import Navbar from "@/components/layout/Navbar";
+import ContactUsTab from "@/components/dashboard/ContactUsTab";
 import HelpDrawer from "@/components/layout/HelpDrawer";
 import useIsMobile from "@/hooks/useIsMobile";
 
