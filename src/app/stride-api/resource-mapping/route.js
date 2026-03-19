@@ -192,7 +192,7 @@ export async function GET(request) {
         } else if (type === 'Facilities') {
             pointsSql = `
                 SELECT 
-                    schoolid as id, school_name as name, district as mun, latitude as lat, longitude as lng,
+                    CONCAT(schoolid, '_', category, '_', fundingyear) as id, school_name as name, district as mun, latitude as lat, longitude as lng,
                     region, division, district,
                     category as metric_label, CAST(allocation AS NUMERIC) as metric_val, fundingyear
                 FROM fact_efd_masterlist

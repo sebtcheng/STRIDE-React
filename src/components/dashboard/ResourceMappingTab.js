@@ -62,8 +62,8 @@ export default function ResourceMappingTab({ filters, setFilters }) {
 
     // Local Custom Sidebar Filter State
     const [localFilters, setLocalFilters] = useState({
-        region: filters.region || "All Regions",
-        division: filters.division || "",
+        region: (filters.region && filters.region !== "All Regions") ? filters.region : "Region I",
+        division: filters.division || "Alaminos City",
         legislative_district: "",
         level: "ES",
         efd_type: ["New Construction"]
@@ -401,7 +401,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
         ];
     }, [activeCategory]);
 
-    const memoizedDataTable = useMemo(() => {
+    const renderDataTable = () => {
         // Local filtering for mobile search
         const filteredPoints = isMobile && searchQuery.trim()
             ? mapData.points.filter(pt =>
@@ -412,6 +412,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
 
         return (
             <DataTable
+                key={`${filters.mapping_trigger || 0}_${activeCategory}`}
                 columns={memoizedColumns}
                 data={filteredPoints}
                 pagination
@@ -444,7 +445,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                 }}
             />
         );
-    }, [mapData.points, memoizedColumns, isMobile, searchQuery]);
+    };
 
     // --- Haversine Distance Utility ---
     const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -498,7 +499,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
         }
     ];
 
-    const memoizedMap = useMemo(() => (
+    const renderMap = () => (
         <ResourceMapArea
             mapData={mapData}
             mapFocus={mapFocus}
@@ -510,7 +511,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
             onMarkerClick={handleMarkerClick}
             onMapReady={() => setMapLoading(false)}
         />
-    ), [mapData.points, mapFocus, activeCategory, selectedSchoolIndustries, selectedSchool]);
+    );
 
     return (
         <div className="flex flex-col md:flex-row min-h-[600px] w-full bg-white relative overflow-hidden">
@@ -684,6 +685,8 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                                     <button
                                         onClick={() => {
                                             setSearchQuery(""); // Added this line
+                                            setSelectedSchool(null); // Clear previous selection
+                                            setMapFocus(null);      // Clear previous focus
                                             if (isMobile) setMobileStep('results');
                                             if (setFilters) {
                                                 const layerMap = {
@@ -868,7 +871,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                                             {mapData.error}
                                         </div>
                                     )}
-                                    {(!isMobile || searchQuery.trim().length > 0) && memoizedDataTable}
+                                    {(!isMobile || searchQuery.trim().length > 0) && renderDataTable()}
                                 </div>
                             </div>
 
@@ -878,7 +881,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                                     <h3 className="font-bold text-sm">Personnel Deployment Mapping</h3>
                                 </div>
                                 <div className="flex-1 relative bg-blue-50">
-                                    {memoizedMap}
+                                    {renderMap()}
                                 </div>
                             </div>
                         </div>
