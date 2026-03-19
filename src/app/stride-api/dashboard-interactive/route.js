@@ -1,9 +1,26 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
+// Server-side in-memory cache for "Lightning Speed" performance
+// This persists while the Next.js server process is alive
+const apiCache = new Map();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache TTL
+
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
+        const cacheKey = searchParams.toString();
+        
+        // Lightning Speed: Check Server-Side Cache
+        if (apiCache.has(cacheKey)) {
+            const cachedData = apiCache.get(cacheKey);
+            if (Date.now() - cachedData.timestamp < CACHE_TTL) {
+                console.log("Lightning Speed: Serving from Server-Side Cache", cacheKey);
+                return NextResponse.json(cachedData.response);
+            } else {
+                apiCache.delete(cacheKey);
+            }
+        }
         const level = searchParams.get('level') || 'National';
         const region = searchParams.get('region');
         const division = searchParams.get('division');
@@ -55,25 +72,49 @@ export async function GET(request) {
             }
         }
 
-        const baseTable = (groupBy === 'legislative_district' && level === 'Division') || (level === 'DistrictGroup' && legislativeDistrictParams)
-            ? '(SELECT d.*, r.legislative_district FROM (SELECT DISTINCT ON (schoolid) * FROM dim_schools) d LEFT JOIN raw_school_unique_v2 r ON d.schoolid = r.schoolid) AS base_table'
-            : '(SELECT DISTINCT ON (schoolid) * FROM dim_schools) AS base_table';
+        const baseTable = `(
+            SELECT d.*, 
+                   r.instructional_rooms_2023_2024 AS raw_instructional_rooms, 
+                   r.classroom_requirement AS raw_classroom_requirement, 
+                   r.legislative_district AS raw_legislative_district,
+                   u.building_count_condemned__for_demolition AS u_building_count_condemned__for_demolition,
+                   u.building_count_for_condemnation AS u_building_count_for_condemnation,
+                   u.building_count_for_completion AS u_building_count_for_completion,
+                   u.building_count_ongoing_construction AS u_building_count_ongoing_construction,
+                   u.number_of_rooms_condemned__for_demolition AS u_number_of_rooms_condemned__for_demolition,
+                   u.number_of_rooms_for_condemnation AS u_number_of_rooms_for_condemnation,
+                   u.number_of_rooms_for_completion AS u_number_of_rooms_for_completion,
+                   u.number_of_rooms_ongoing_construction AS u_number_of_rooms_ongoing_construction
+            FROM dim_schools d 
+            LEFT JOIN raw_school_unique_v2 r ON d.schoolid::text = r.schoolid::text
+            LEFT JOIN dim_school_unique_48k u ON d.schoolid::text = u.schoolid::text
+        ) AS base_table`;
 
         // 1. Definition Map (Connecting UI IDs to SQL implementations)
         const schemaDef = {
             TotalSchools: { type: 'COUNT', label: 'Number of Schools', sql: 'COUNT(*)' },
             TotalTeachers: { type: 'SUM', label: 'Total Teachers', sql: "SUM(CAST(NULLIF(totalteachers::text, '') AS numeric))" },
             TotalShortage: { type: 'SUM', label: 'Teacher Shortage', sql: "SUM(CAST(NULLIF(total_shortage::text, '') AS numeric))" },
-            TotalClassrooms: { type: 'SUM', label: 'Total Classrooms', sql: "SUM(CAST(NULLIF(totalenrolment::text, '') AS numeric))" }, // Placeholder until EFD is joined
+            TotalClassrooms: { type: 'SUM', label: 'Total Classrooms', sql: "SUM(NULLIF(regexp_replace(raw_instructional_rooms::text, '[^0-9.-]', '', 'g'), '')::numeric)" }, 
             ClassroomShortage: { type: 'SUM', label: 'Classroom Shortage', sql: "SUM(CAST(NULLIF(classroom_shortage::text, '') AS numeric))" },
-            ClassroomRequirement: { type: 'SUM', label: 'Classroom Requirement', sql: "SUM(CAST(NULLIF(classroom_shortage::text, '') AS numeric))" }, // Mapped pending EFD pipeline details
+            ClassroomRequirement: { type: 'SUM', label: 'Classroom Requirement', sql: "SUM(NULLIF(regexp_replace(raw_classroom_requirement::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            Buildings: { type: 'SUM', label: 'Total Buildings', sql: "SUM(CAST(NULLIF(buildings::text, '') AS numeric))" },
+            MajorRepairsNeeded: { type: 'SUM', label: 'Major Repairs Needed', sql: "SUM(CAST(NULLIF(major_repair_2023_2024::text, '') AS numeric))" },
+            LMS: { type: 'SUM', label: 'Last Mile Schools', sql: "SUM(CASE WHEN lms_school = 'Yes' THEN 1 ELSE 0 END)" },
             BuildableSpace: { type: 'SUM', label: 'Buildable Space Count', sql: "SUM(CASE WHEN with_buildable_space = 'Yes' THEN 1 ELSE 0 END)" },
             TotalEnrolment: { type: 'SUM', label: 'Total Enrolment', sql: "SUM(CAST(NULLIF(totalenrolment::text, '') AS numeric))" },
             BuildingCountGood: { type: 'SUM', label: 'Good Buildings', sql: "SUM(CAST(NULLIF(building_count_good_condition::text, '') AS numeric))" },
             BuildingCountNeedsMajorRepair: { type: 'SUM', label: 'Bldgs Major Repair', sql: "SUM(CAST(NULLIF(building_count_needs_major_repair::text, '') AS numeric))" },
-            BuildingCountCondemned: { type: 'SUM', label: 'Bldgs Condemned', sql: "SUM(CAST(NULLIF(building_count_condemned__for_demolition::text, '') AS numeric))" },
+            BuildingCountCondemned: { type: 'SUM', label: 'Bldgs Condemned', sql: "SUM(NULLIF(regexp_replace(u_building_count_condemned__for_demolition::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            BuildingCountForDemolition: { type: 'SUM', label: 'Bldgs for Condemnation', sql: "SUM(NULLIF(regexp_replace(u_building_count_for_condemnation::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            BuildingCountForCompletion: { type: 'SUM', label: 'Bldgs for Completion', sql: "SUM(NULLIF(regexp_replace(u_building_count_for_completion::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            BuildingCountOngoing: { type: 'SUM', label: 'Bldgs Ongoing', sql: "SUM(NULLIF(regexp_replace(u_building_count_ongoing_construction::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
             RoomsGood: { type: 'SUM', label: 'Good Rooms', sql: "SUM(CAST(NULLIF(number_of_rooms_good_condition::text, '') AS numeric))" },
             RoomsNeedsMajorRepair: { type: 'SUM', label: 'Rooms Major Repair', sql: "SUM(CAST(NULLIF(number_of_rooms_needs_major_repair::text, '') AS numeric))" },
+            RoomsCondemned: { type: 'SUM', label: 'Rooms Condemned', sql: "SUM(NULLIF(regexp_replace(u_number_of_rooms_condemned__for_demolition::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            RoomsForDemolition: { type: 'SUM', label: 'Rooms for Condemnation', sql: "SUM(NULLIF(regexp_replace(u_number_of_rooms_for_condemnation::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            RoomsForCompletion: { type: 'SUM', label: 'Rooms for Completion', sql: "SUM(NULLIF(regexp_replace(u_number_of_rooms_for_completion::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
+            RoomsOngoing: { type: 'SUM', label: 'Rooms Ongoing', sql: "SUM(NULLIF(regexp_replace(u_number_of_rooms_ongoing_construction::text, '[^0-9.-]', '', 'g'), '')::numeric)" },
             Kinder: { type: 'SUM', label: 'Kindergarten Enrolment', sql: "SUM(CAST(NULLIF(kinder::text, '') AS numeric))" },
             G1: { type: 'SUM', label: 'Grade 1', sql: "SUM(CAST(NULLIF(g1::text, '') AS numeric))" },
             G2: { type: 'SUM', label: 'Grade 2', sql: "SUM(CAST(NULLIF(g2::text, '') AS numeric))" },
@@ -190,10 +231,24 @@ export async function GET(request) {
             }
         }
 
-        return NextResponse.json({
+        const response = {
             status: "success",
             data: { blocks: Object.values(results) }
+        };
+
+        // Store in cache for lightning speed
+        apiCache.set(cacheKey, {
+            timestamp: Date.now(),
+            response: response
         });
+
+        // Limit cache size to prevent memory leaks (keep last 500 unique requests)
+        if (apiCache.size > 500) {
+            const firstKey = apiCache.keys().next().value;
+            apiCache.delete(firstKey);
+        }
+
+        return NextResponse.json(response);
 
     } catch (error) {
         console.error("Dashboard Dynamic API Failed:", error);

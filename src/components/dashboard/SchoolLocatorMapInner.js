@@ -26,7 +26,7 @@ function ChangeView({ center, zoom }) {
     return null;
 }
 
-function NativeMarkerCluster({ schools, iconCreateFunction, onMarkerClick }) {
+function NativeMarkerCluster({ schools, iconCreateFunction, onMarkerClick, onMapReady }) {
     const map = useMap();
 
     useEffect(() => {
@@ -72,6 +72,14 @@ function NativeMarkerCluster({ schools, iconCreateFunction, onMarkerClick }) {
         clusterGroup.addLayers(markers);
         map.addLayer(clusterGroup);
 
+        // Notify parent that rendering/processing is complete
+        if (onMapReady) {
+            // Use requestAnimationFrame to ensure the browser has completed one render cycle
+            requestAnimationFrame(() => {
+                onMapReady();
+            });
+        }
+
         return () => {
             map.removeLayer(clusterGroup);
         };
@@ -88,7 +96,7 @@ const customSchoolIcon = L.divIcon({
     iconAnchor: [16, 16],
 });
 
-export default function SchoolLocatorMapInner({ selectedSchool, activeSchools, onMarkerClick }) {
+export default function SchoolLocatorMapInner({ selectedSchool, activeSchools, onMarkerClick, onMapReady }) {
     const defaultCenter = [12.8797, 121.7740];
     const center = selectedSchool ? [selectedSchool.lat, selectedSchool.lng] : defaultCenter;
     const zoom = selectedSchool ? 13 : 6;
@@ -124,7 +132,12 @@ export default function SchoolLocatorMapInner({ selectedSchool, activeSchools, o
                     />
                 </BaseLayer>
             </LayersControl>
-            <NativeMarkerCluster schools={activeSchools} iconCreateFunction={clusterIconFunction} onMarkerClick={onMarkerClick} />
+            <NativeMarkerCluster 
+                schools={activeSchools} 
+                iconCreateFunction={clusterIconFunction} 
+                onMarkerClick={onMarkerClick} 
+                onMapReady={onMapReady}
+            />
         </MapContainer>
     );
 }

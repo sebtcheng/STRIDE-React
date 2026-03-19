@@ -10,8 +10,9 @@ export async function GET(request) {
 
         // Build SQL Query with JOIN to Infra and raw_school_unique_v2 data
         let sql = `
-            SELECT DISTINCT ON (s.schoolid)
+            SELECT 
                 s.*,
+                s.schoolid::text as schoolid_str,
                 COALESCE(p.project_count, 0) as infra_projects,
                 COALESCE(p.total_allocation, 0) as total_infra_value,
                 r.school_size_typology,
@@ -89,6 +90,7 @@ export async function GET(request) {
                 displayed: result.rows.length,
                 rows: result.rows.map(row => ({
                     ...row,
+                    schoolid: row.schoolid_str,
                     infra_projects: Number(row.infra_projects),
                     total_infra_value: Number(row.total_infra_value)
                 })),

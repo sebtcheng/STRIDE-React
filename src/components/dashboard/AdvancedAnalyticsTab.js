@@ -409,7 +409,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                                                         insidetextanchor: 'end',
                                                         cliponaxis: false,
                                                         textfont: {
-                                                            family: 'Inter, sans-serif',
+                                                            family: 'Poppins, sans-serif',
                                                             size: 11,
                                                             color: '#475569'
                                                         },
@@ -419,7 +419,7 @@ export default function AdvancedAnalyticsTab({ filters, drillDown, goBack }) {
                                                         }
                                                     }]}
                                                     layout={{
-                                                        font: { family: 'Inter, sans-serif', color: '#475569', size: 11 },
+                                                        font: { family: 'Poppins, sans-serif', color: '#475569', size: 11 },
                                                         paper_bgcolor: 'transparent',
                                                         plot_bgcolor: 'transparent',
                                                         autosize: true,

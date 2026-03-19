@@ -207,7 +207,7 @@ export default function InfrastructureTab({ filters }) {
     };
 
     const layoutStyling = {
-        font: { family: 'Inter, sans-serif' },
+        font: { family: 'Poppins, sans-serif' },
         margin: { t: 40, r: 20, b: 40, l: 60 },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',

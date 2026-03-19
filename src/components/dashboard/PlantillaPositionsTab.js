@@ -237,7 +237,7 @@ function PositionCard({ posData, groupingLevel, onChartClick }) {
                             barmode: 'stack',
                             autosize: true,
                             margin: { l: 150, r: 90, t: 10, b: 40 },
-                            font: { family: 'Inter, sans-serif' },
+                            font: { family: 'Poppins, sans-serif' },
                             yaxis: { autorange: 'reversed', tickfont: { size: 10 } },
                             xaxis: { title: 'Number of Positions' },
                             paper_bgcolor: 'transparent',

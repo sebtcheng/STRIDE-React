@@ -8,38 +8,51 @@ import "leaflet.markercluster";
 import { renderToStaticMarkup } from "react-dom/server";
 import { School } from "lucide-react";
 
+// Global Icon Cache to prevent redundant renderToStaticMarkup calls
+const schoolIconCache = new Map();
+let industryIconCache = null;
+
 // Standard School Icon Function
 const getSchoolIcon = (color = "#003366") => {
+    if (schoolIconCache.has(color)) return schoolIconCache.get(color);
+
     const schoolIconSvg = renderToStaticMarkup(
         <div style={{ backgroundColor: color }} className="text-white rounded-full w-8 h-8 flex items-center justify-center border-2 border-[#FFB81C] shadow-lg">
             <School size={16} color="white" />
         </div>
     );
 
-    return L.divIcon({
+    const icon = L.divIcon({
         html: schoolIconSvg,
         className: 'bg-transparent',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
         popupAnchor: [0, -16],
     });
+
+    schoolIconCache.set(color, icon);
+    return icon;
 };
 
 // Industry Icon Function
 const getIndustryIcon = () => {
+    if (industryIconCache) return industryIconCache;
+
     const industryIconSvg = renderToStaticMarkup(
         <div style={{ backgroundColor: '#f97316' }} className="text-white rounded-full w-6 h-6 flex items-center justify-center border border-white shadow-md">
             <div className="w-2.5 h-2.5 bg-white shrink-0" style={{ clipPath: 'polygon(0 100%, 0 0, 50% 50%, 100% 0, 100% 100%)' }}></div>
         </div>
     );
 
-    return L.divIcon({
+    industryIconCache = L.divIcon({
         html: industryIconSvg,
         className: 'bg-transparent',
         iconSize: [24, 24],
         iconAnchor: [12, 12],
         popupAnchor: [0, -12],
     });
+
+    return industryIconCache;
 };
 
 function MapController({ center, zoom }) {
@@ -232,7 +245,7 @@ const getPopupHtml = (pt, activeCategory, industries, isTooltip = false) => {
     `;
 };
 
-function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFunction, setSelectedSchool, setMapFocus, selectedSchool, activeCategory, selectedSchoolIndustries, onMarkerClick }) {
+function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFunction, setSelectedSchool, setMapFocus, selectedSchool, activeCategory, selectedSchoolIndustries, onMarkerClick, onMapReady }) {
     const map = useMap();
     const markersRef = useRef(new Map());
     const clusterGroupRef = useRef(null);
@@ -332,13 +345,22 @@ function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFu
                         setMapFocus([Number(pt.lat), Number(pt.lng)]);
                         if (onMarkerClick) onMarkerClick(pt);
                     });
-                    markersRef.current.set(pt.id, marker);
+                    const markerId = pt.id || pt.school_id;
+                    if (markerId) markersRef.current.set(markerId, marker);
                     return marker;
                 });
 
             clusterGroup.addLayers(markers);
             map.addLayer(clusterGroup);
             clusterGroupRef.current = clusterGroup;
+        }
+
+        // Notify parent that rendering/processing is complete
+        if (onMapReady) {
+            // Use requestAnimationFrame to ensure the browser has completed one render cycle
+            requestAnimationFrame(() => {
+                onMapReady();
+            });
         }
 
         // 2. Plot Industries via Cluster Group
@@ -385,17 +407,26 @@ function NativeMarkerCluster({ mapData, iconCreateFunction, industryIconCreateFu
 
     useEffect(() => {
         if (!selectedSchool || !clusterGroupRef.current) return;
-        const marker = markersRef.current.get(selectedSchool.id);
-        if (marker) {
-            clusterGroupRef.current.zoomToShowLayer(marker, () => {
-                marker.openPopup();
-            });
+        
+        const schoolId = selectedSchool.id || selectedSchool.school_id;
+        if (!schoolId) return;
+
+        const marker = markersRef.current.get(schoolId);
+        if (marker && clusterGroupRef.current.hasLayer(marker)) {
+            try {
+                clusterGroupRef.current.zoomToShowLayer(marker, () => {
+                    marker.openPopup();
+                });
+            } catch (err) {
+                console.warn("Could not zoom to school marker:", err);
+            }
         }
     }, [selectedSchool]);
 
     useEffect(() => {
         if (activeCategory === 'Industries (SHS)' && selectedSchool && selectedSchoolIndustries) {
-            const marker = markersRef.current.get(selectedSchool.id);
+            const schoolId = selectedSchool.id || selectedSchool.school_id;
+            const marker = markersRef.current.get(schoolId);
             if (marker) {
                 marker.setPopupContent(getPopupHtml(selectedSchool, activeCategory, selectedSchoolIndustries));
                 if (map.getBounds().contains(marker.getLatLng())) {
@@ -546,7 +577,7 @@ function MapLegend({ activeCategory }) {
     );
 }
 
-export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, setMapFocus, activeCategory, selectedSchoolIndustries, selectedSchool, onMarkerClick }) {
+export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, setMapFocus, activeCategory, selectedSchoolIndustries, selectedSchool, onMarkerClick, onMapReady }) {
     const clusterIconFunction = (cluster) => {
         return L.divIcon({
             html: `<div class="bg-white text-[#003366] font-bold rounded-full w-9 h-9 flex items-center justify-center border-2 border-[#003366] shadow-lg text-xs opacity-95">${cluster.getChildCount()}</div>`,
@@ -580,6 +611,7 @@ export default function ResourceMapArea({ mapData, mapFocus, setSelectedSchool, 
                 activeCategory={activeCategory}
                 selectedSchoolIndustries={selectedSchoolIndustries}
                 onMarkerClick={onMarkerClick}
+                onMapReady={onMapReady}
             />
         </MapContainer>
     );

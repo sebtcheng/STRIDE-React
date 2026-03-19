@@ -21,7 +21,7 @@ export default function HRTrackingTab() {
     };
 
     const layoutStyling = {
-        font: { family: 'Inter, sans-serif' },
+        font: { family: 'Poppins, sans-serif' },
         margin: { t: 40, r: 20, b: 60, l: 40 },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',

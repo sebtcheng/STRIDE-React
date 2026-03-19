@@ -12,6 +12,7 @@ const ResourceMapArea = dynamic(() => import("./ResourceMapArea"), { ssr: false 
 
 export default function ResourceMappingTab({ filters, setFilters }) {
     const [mapData, setMapData] = useState({ points: [], industryPoints: [], loading: false, totalMatched: 0, error: null });
+    const [mapLoading, setMapLoading] = useState(false);
     const [mapFocus, setMapFocus] = useState(null);
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [selectedSchoolIndustries, setSelectedSchoolIndustries] = useState(null);
@@ -137,6 +138,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
     const fetchGISData = async () => {
         const currentTrigger = filters.mapping_trigger;
         setMapData(prev => ({ ...prev, loading: true, error: null }));
+        setMapLoading(true);
         try {
             const params = new URLSearchParams({
                 mode: filters.resource_view_mode || 'Standard',
@@ -424,7 +426,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
                     <div className="p-10 text-center">
                         {!filters.mapping_trigger ? (
                             <p className="text-gray-400 font-medium italic">Configure filters and click "Generate Map & Data" to load data</p>
-                        ) : mapData.loading ? (
+                        ) : (mapData.loading || mapLoading) ? (
                             <p className="text-blue-500 font-bold animate-pulse">Fetching latest data...</p>
                         ) : isMobile && !searchQuery ? (
                             <p className="text-gray-400 font-medium">Type a school name in the search bar to view data</p>
@@ -506,6 +508,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
             selectedSchoolIndustries={selectedSchoolIndustries}
             selectedSchool={selectedSchool}
             onMarkerClick={handleMarkerClick}
+            onMapReady={() => setMapLoading(false)}
         />
     ), [mapData.points, mapFocus, activeCategory, selectedSchoolIndustries, selectedSchool]);
 
@@ -909,7 +912,7 @@ export default function ResourceMappingTab({ filters, setFilters }) {
 
             {/* Global Loader overlay */}
             {
-                mapData.loading && (
+                (mapData.loading || mapLoading) && (
                     <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-[2000] flex items-center justify-center pointer-events-none">
                         <div className="bg-white p-5 rounded-3xl shadow-2xl border border-gray-100 flex flex-col items-center gap-4">
                             <div className="h-10 w-10 border-4 border-[#FFB81C] border-t-[#003366] rounded-full animate-spin"></div>

@@ -8,6 +8,26 @@ import SchoolLocatorTab from "./SchoolLocatorTab";
 // Dynamically import Plotly with next/dynamic and no SSR to prevent issues with window variable missing 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false, loading: () => <div className="h-64 flex items-center justify-center text-gray-400">Loading Chart Engine...</div> });
 
+const ProcessingMessage = () => {
+    const [msgIndex, setMsgIndex] = useState(0);
+    const messages = [
+        "Aggregating Regional Metrics...",
+        "Optimizing Infrastructure Signals...",
+        "Recalculating Classroom Requirements...",
+        "Syncing Building Condition Logs...",
+        "Finalizing Data Grid Configuration..."
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setMsgIndex((prev) => (prev + 1) % messages.length);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return <span className="text-[#003366] font-black tracking-widest uppercase text-base transition-all duration-500">{messages[msgIndex]}</span>;
+};
+
 export default function InteractiveDashboardTab({ filters, drillDown, goBack, subTabOverride, onSubTabChange, isMobile }) {
     const [localSubTab, setLocalSubTab] = useState("visuals");
     const subTab = subTabOverride || localSubTab;
@@ -15,6 +35,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
     const [dashboardBlocks, setDashboardBlocks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
+    const dashboardCache = useRef({}); // Client-side cache for instantaneous drilldown/back navigation
     const [maximizedBlock, setMaximizedBlock] = useState(null);
     const [divisionGrouping, setDivisionGrouping] = useState('municipality');
     const [isAnimated, setIsAnimated] = useState(false);
@@ -32,6 +53,9 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
             return;
         }
 
+        const controller = new AbortController();
+        const signal = controller.signal;
+
         setLoading(true);
         setApiError(null);
         const url = new URL(window.location.origin + "/stride-api/dashboard-interactive");
@@ -43,11 +67,24 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
         if (filters.drillLevel === 'Division') url.searchParams.append("groupBy", divisionGrouping);
         url.searchParams.append("metrics", selectedMetricsStr);
 
-        fetch(url)
+        const cacheKey = url.toString();
+        if (dashboardCache.current[cacheKey]) {
+            console.log("Lightning Speed: Loading from Client-Side Cache", cacheKey);
+            setDashboardBlocks(dashboardCache.current[cacheKey]);
+            setIsAnimated(false);
+            setIsLabelsVisible(false);
+            setTimeout(() => setIsAnimated(true), 100);
+            setTimeout(() => setIsLabelsVisible(true), 800);
+            setLoading(false);
+            return;
+        }
+
+        fetch(url, { signal })
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
                     setDashboardBlocks(res.data.blocks || []);
+                    dashboardCache.current[cacheKey] = res.data.blocks || []; // Store in cache
                     setIsAnimated(false);
                     setIsLabelsVisible(false);
                     setTimeout(() => setIsAnimated(true), 100);
@@ -60,11 +97,14 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                 setLoading(false);
             })
             .catch(err => {
+                if (err.name === 'AbortError') return;
                 console.error("Error fetching dashboard interactive:", err);
                 setApiError("Critical Network Request Failed.");
                 setDashboardBlocks([]);
                 setLoading(false);
             });
+
+        return () => controller.abort();
     }, [filters.global_trigger, filters.selected_metrics, filters.drillLevel, filters.region, filters.division, filters.municipality, filters.legislative_district, divisionGrouping]);
 
     // Handle Report Generation Trigger
@@ -116,9 +156,14 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
     }, [filters.report_trigger]);
 
     const filtersRef = useRef(filters);
+    const drillDownRef = useRef(drillDown);
+    const divisionGroupingRef = useRef(divisionGrouping);
+
     useEffect(() => {
         filtersRef.current = filters;
-    }, [filters]);
+        drillDownRef.current = drillDown;
+        divisionGroupingRef.current = divisionGrouping;
+    }, [filters, drillDown, divisionGrouping]);
 
     // Keep maximized modal in-sync with fresh data arriving from drilldown fetches
     useEffect(() => {
@@ -144,7 +189,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
     }, [maximizedBlock]);
 
     const layoutStyling = {
-        font: { family: 'Inter, sans-serif', color: '#475569', size: 10 },
+        font: { family: 'Poppins, sans-serif', color: '#475569', size: 10 },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',
         autosize: true,
@@ -211,8 +256,23 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                         </div>
 
                         {loading && (
-                            <div className="text-gray-500 font-bold text-center text-sm mt-10 w-full animate-pulse">
-                                Rebuilding chart configuration metrics grid...
+                            <div className="flex flex-col items-center justify-center py-16 animate-in fade-in duration-500">
+                                <div className="relative w-24 h-24 mb-6">
+                                    <div className="absolute inset-0 border-4 border-[#003366]/10 rounded-full"></div>
+                                    <div className="absolute inset-0 border-4 border-t-[#003366] rounded-full animate-spin"></div>
+                                    <div className="absolute inset-4 bg-[#003366]/5 rounded-full flex items-center justify-center">
+                                        <div className="w-8 h-8 bg-[#003366] rounded flex items-center justify-center animate-pulse shadow-lg">
+                                            <div className="w-4 h-0.5 bg-white mb-1"></div>
+                                            <div className="w-4 h-0.5 bg-white"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                    <ProcessingMessage />
+                                </div>
                             </div>
                         )}
 
@@ -265,7 +325,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                                                             insidetextanchor: 'end',
                                                             cliponaxis: false,
                                                             textfont: {
-                                                                family: 'Inter, sans-serif',
+                                                                family: 'Poppins, sans-serif',
                                                                 size: 10,
                                                                 color: '#475569'
                                                             },
@@ -296,10 +356,15 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
 
                                                                 if (clickedName) {
                                                                     const currentFilters = filtersRef.current;
+                                                                    const currentDrillDown = drillDownRef.current;
+                                                                    const currentGrouping = divisionGroupingRef.current;
+
+                                                                    console.log(`[Drilldown] Resolved Clicked Item: "${clickedName}" | Current Level: ${currentFilters.drillLevel}`);
+
                                                                     if (block.type === 'numeric') {
-                                                                        if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
-                                                                        else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
-                                                                        else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                                        if (currentFilters.drillLevel === 'National') currentDrillDown('Region', clickedName);
+                                                                        else if (currentFilters.drillLevel === 'Region') currentDrillDown('Division', clickedName);
+                                                                        else if (currentFilters.drillLevel === 'Division') currentDrillDown('DistrictGroup', clickedName, currentGrouping);
                                                                     }
                                                                 }
                                                             }
@@ -363,7 +428,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                                                         insidetextanchor: 'end',
                                                         cliponaxis: false,
                                                         textfont: {
-                                                            family: 'Inter, sans-serif',
+                                                            family: 'Poppins, sans-serif',
                                                             size: 13,
                                                             color: '#475569'
                                                         },
@@ -385,7 +450,7 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
                                                         yaxis: {
                                                             ...layoutStyling.yaxis,
                                                             cliponaxis: false,
-                                                            tickfont: { size: 12, family: 'Inter, sans-serif' }
+                                                            tickfont: { size: 12, family: 'Poppins, sans-serif' }
                                                         }
                                                     }}
                                                     config={{ displayModeBar: false, doubleClick: false, responsive: true }}
@@ -399,10 +464,15 @@ export default function InteractiveDashboardTab({ filters, drillDown, goBack, su
 
                                                             if (clickedName) {
                                                                 const currentFilters = filtersRef.current;
+                                                                const currentDrillDown = drillDownRef.current;
+                                                                const currentGrouping = divisionGroupingRef.current;
+
+                                                                console.log(`[Modal Drilldown] Resolved Clicked Item: "${clickedName}" | Current Level: ${currentFilters.drillLevel}`);
+
                                                                 if (maximizedBlock.type === 'numeric') {
-                                                                    if (currentFilters.drillLevel === 'National') drillDown('Region', clickedName);
-                                                                    else if (currentFilters.drillLevel === 'Region') drillDown('Division', clickedName);
-                                                                    else if (currentFilters.drillLevel === 'Division') drillDown('DistrictGroup', clickedName, divisionGrouping);
+                                                                    if (currentFilters.drillLevel === 'National') currentDrillDown('Region', clickedName);
+                                                                    else if (currentFilters.drillLevel === 'Region') currentDrillDown('Division', clickedName);
+                                                                    else if (currentFilters.drillLevel === 'Division') currentDrillDown('DistrictGroup', clickedName, currentGrouping);
                                                                 }
                                                             }
                                                         }

@@ -12,12 +12,33 @@ const DynamicMap = dynamic(
     { ssr: false, loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center animate-pulse text-[#003366] font-bold">Loading Map Engine...</div> }
 );
 
+const ProcessingMessage = () => {
+    const [msgIndex, setMsgIndex] = useState(0);
+    const messages = [
+        "Calculating Cluster Centroids...",
+        "Mapping School Coordinates...",
+        "Optimizing Geographic Indices...",
+        "Synchronizing Infrastructure Data...",
+        "Finalizing Spatial Layout..."
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setMsgIndex((prev) => (prev + 1) % messages.length);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return <span className="text-[#003366] font-black tracking-widest uppercase text-base transition-all duration-500">{messages[msgIndex]}</span>;
+};
+
 // Leaflet CSS needs to be imported or handled in layout, but let's mock the UI for now.
 
 export default function SchoolLocatorTab({ filters, isMobile }) {
     const [selectedSchool, setSelectedSchool] = useState(null);
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [mapLoading, setMapLoading] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,6 +63,7 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
             }
 
             setLoading(true);
+            setMapLoading(true);
             setError(null);
             try {
                 const params = new URLSearchParams();
@@ -56,7 +78,9 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
 
                 if (data.status === 'success') {
                     setSchools(data.data);
+                    // mapLoading(true) was already set at start of fetch, it will be cleared by onMapReady
                 } else {
+                    setMapLoading(false); // Clear error case
                     setError(data.message || 'Error fetching school location data');
                 }
             } catch (err) {
@@ -170,14 +194,19 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
                             <DataTable
                                 columns={columns}
                                 data={filteredSchools}
-                                progressPending={loading}
+                                progressPending={loading || mapLoading}
                                 progressComponent={
-                                    <div className="p-10 flex flex-col items-center justify-center gap-2">
-                                        <div className="relative">
-                                            <Loader2 className="w-8 h-8 text-[#003366] animate-spin" />
-                                            <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse"></div>
+                                    <div className="p-10 flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
+                                        <div className="relative w-20 h-20 mb-6">
+                                            <div className="absolute inset-0 border-4 border-[#003366]/10 rounded-full"></div>
+                                            <div className="absolute inset-0 border-4 border-t-[#003366] rounded-full animate-spin"></div>
                                         </div>
-                                        <span className="text-[10px] font-black text-[#003366] mt-2 uppercase tracking-widest opacity-60">Synchronizing...</span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                            <ProcessingMessage />
+                                        </div>
                                     </div>
                                 }
                                 pagination
@@ -200,14 +229,19 @@ export default function SchoolLocatorTab({ filters, isMobile }) {
                 {/* Right Map Pane */}
                 <div
                     ref={mapRef}
-                    className={`w-full lg:w-1/2 bg-gray-100 relative h-full transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+                    className={`w-full lg:w-1/2 bg-gray-100 relative h-full transition-opacity ${(loading || mapLoading) ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}
                 >
                     {error && (
                         <div className="absolute top-4 left-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
                             <strong>Error loading map data:</strong> {error}
                         </div>
                     )}
-                    <DynamicMap selectedSchool={selectedSchool} activeSchools={deferredSchools} onMarkerClick={handleMarkerClick} />
+                    <DynamicMap 
+                        selectedSchool={selectedSchool} 
+                        activeSchools={deferredSchools} 
+                        onMarkerClick={handleMarkerClick} 
+                        onMapReady={() => setMapLoading(false)}
+                    />
                 </div>
             </div>
 
